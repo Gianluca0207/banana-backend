@@ -111,6 +111,8 @@ app.use("/api/weather", require("./routes/weatherRoutes"));
 app.use("/api/payments", require("./routes/paymentRoutes"));
 app.use("/api/gdrive", require("./routes/gdriveRoutes"));
 app.use('/api/download', require('./routes/downloadRoutes'));
+app.use('/api/mongo-summary', require('./routes/mongoSummaryRoutes'));
+
 
 
 

@@ -30,7 +30,7 @@ router.get('/sync/exporters', (req, res) => {
 });
 
 // 🔁 Estadisticas
-router.get('/sync/forecast', (req, res) => {
+router.get('/sync/forecst', (req, res) => {
   const folderId = '1bpXUyk1MlB3Zsx4Z6SBXZzr3efJfeDcy';
   const filePath = path.join(__dirname, '../data/ESTADISTICAS_COM_2025.xlsx');
   syncFile(folderId, filePath, 'Forecast', res);

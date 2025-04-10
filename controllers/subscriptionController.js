@@ -36,7 +36,7 @@ const createSubscription = async (req, res) => {
         enabled: true,
         allow_redirects: 'never'
       },
-      return_url: 'http://192.168.1.5:5002/api/payments/success'
+      return_url: 'https://banana-backend-3.onrender.com/api/payments/success'
     });
 
     // Trova la sottoscrizione esistente
@@ -305,7 +305,7 @@ const renewSubscription = async (req, res) => {
         enabled: true,
         allow_redirects: 'never'
       },
-      return_url: 'http://192.168.1.5:5002/api/payments/success'
+      return_url: 'https://banana-backend-3.onrender.com/api/payments/success'
     });
 
     // Trova la sottoscrizione esistente

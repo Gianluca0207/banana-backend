@@ -13,23 +13,50 @@ const generateToken = (id) => {
 const registerUser = async (req, res) => {
   const { name, email, password, phone } = req.body;
 
-  console.log("📥 Dati ricevuti:", req.body);
-  console.log("🔌 Stato connessione Mongo:", mongoose.connection.readyState); // 1 = connesso
+  console.log("📥 Dati ricevuti:", { ...req.body, password: '***' }); // Nascondi la password nei log
 
   try {
+    // Validazione input
     if (!name || !email || !password || !phone) {
-      return res.status(400).json({ message: "All fields are required" });
+      return res.status(400).json({ 
+        success: false,
+        message: "All fields are required",
+        missingFields: {
+          name: !name,
+          email: !email,
+          password: !password,
+          phone: !phone
+        }
+      });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();  // Normalizza l'email (minuscolo, senza spazi)
+    // Validazione email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Invalid email format" 
+      });
+    }
+
+    // Validazione password
+    if (password.length < 6) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Password must be at least 6 characters long" 
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
     
     // Verifica se l'email è già presente nel database
     const userExists = await User.findOne({ email: normalizedEmail });
 
-    console.log("🔍 Email già presente?", userExists !== null);  // Log se l'email è duplicata
-
     if (userExists) {
-      return res.status(400).json({ message: "Email already registered" });
+      return res.status(400).json({ 
+        success: false,
+        message: "Email already registered" 
+      });
     }
 
     const role = (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD)
@@ -38,9 +65,8 @@ const registerUser = async (req, res) => {
 
     // Imposta il periodo di trial (3 giorni)
     const now = new Date();
-    const trialEndsAt = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);  // 3 giorni di trial
+    const trialEndsAt = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
 
-    // ✅ Usa .save() per attivare il middleware che cripta la password
     const user = new User({
       name,
       email: normalizedEmail,
@@ -56,12 +82,11 @@ const registerUser = async (req, res) => {
     });
 
     await user.save();
-    console.log("🧾 User saved:", user);
-    console.log("✅ User created successfully:", user.email);
-    const checkUser = await User.findOne({ email: normalizedEmail });
-    console.log("🔍 Verifica post-save:", checkUser);
+
+    const token = generateToken(user.id);
 
     res.status(201).json({
+      success: true,
       _id: user.id,
       name: user.name,
       email: user.email,
@@ -70,17 +95,24 @@ const registerUser = async (req, res) => {
       isTrial: user.isTrial,
       trialEndsAt: user.trialEndsAt,
       isSubscribed: user.isSubscribed,
-      token: generateToken(user.id),
+      token
     });
 
   } catch (error) {
     console.error("❌ Registration error:", error);
 
     if (error.code === 11000) {
-      return res.status(400).json({ message: "Email already registered (duplicate)" });
+      return res.status(400).json({ 
+        success: false,
+        message: "Email already registered" 
+      });
     }
 
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: "Server error",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
@@ -89,26 +121,45 @@ const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   try {
+    if (!email || !password) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Email and password are required" 
+      });
+    }
+
     const user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({ 
+        success: false,
+        message: "Invalid credentials" 
+      });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({ 
+        success: false,
+        message: "Invalid credentials" 
+      });
     }
 
-    // ⏳ Controllo trial scaduto
+    // Controllo trial scaduto
     if (user.isTrial && !user.isSubscribed && user.trialEndsAt) {
       const now = new Date();
       if (now > new Date(user.trialEndsAt)) {
-        return res.status(403).json({ message: "Your free trial has expired. Please subscribe to continue." });
+        return res.status(403).json({ 
+          success: false,
+          message: "Your free trial has expired. Please subscribe to continue." 
+        });
       }
     }
 
+    const token = generateToken(user.id);
+
     res.json({
+      success: true,
       _id: user.id,
       name: user.name,
       email: user.email,
@@ -116,12 +167,16 @@ const loginUser = async (req, res) => {
       isTrial: user.isTrial,
       trialEndsAt: user.trialEndsAt,
       isSubscribed: user.isSubscribed,
-      token: generateToken(user.id),
+      token
     });
 
   } catch (error) {
-    console.error("❌ Errore login:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error("❌ Login error:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Server error",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 

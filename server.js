@@ -18,6 +18,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use('/data', express.static(require('path').join(__dirname, 'data')));
 
 // MongoDB Connection Options
 const mongoOptions = {
@@ -109,6 +110,9 @@ app.use("/api/fulltopexporters", require("./routes/fullTopExporters"));
 app.use("/api/weather", require("./routes/weatherRoutes"));
 app.use("/api/payments", require("./routes/paymentRoutes"));
 app.use("/api/gdrive", require("./routes/gdriveRoutes"));
+app.use('/api/download', require('./routes/downloadRoutes'));
+
+
 
 
 // ✅ Nuova rotta per Exporter Data Cono Sur

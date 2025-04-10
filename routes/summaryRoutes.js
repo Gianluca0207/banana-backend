@@ -100,18 +100,27 @@ router.get('/filters/available', (req, res) => {
   }
 });
 
+const fs = require('fs');
+
+// 📁 Percorso del file Excel (riutilizzo della dichiarazione esistente)
+
 // ✅ GET /api/summary/download/estadisticas – Scarica il file Excel
 router.get('/download/estadisticas', (req, res) => {
+  // Verifica se il file esiste
+  if (!fs.existsSync(filePath)) {
+    console.error('❌ File non trovato:', filePath);
+    return res.status(404).json({ error: 'File non trovato' });
+  }
+
+  // Se il file esiste, eseguiamo il download
   res.download(filePath, 'ESTADISTICAS_COM_2025.xlsx', (err) => {
-    if (err && !res.headersSent) {
-      console.error('❌ Errore durante il download:', err);
-      try {
-        res.status(500).json({ error: 'Errore durante il download del file' });
-      } catch (e) {
-        console.error('Errore nella gestione dell\'errore:', e);
-      }
+    if (err) {
+      console.error('❌ Errore durante il download del file:', err);
+      return res.status(500).json({ error: 'Errore durante il download del file' });
     }
+    console.log('✅ File scaricato correttamente');
   });
 });
 
 module.exports = router;
+

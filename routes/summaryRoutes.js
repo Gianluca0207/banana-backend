@@ -4,7 +4,7 @@ const xlsx = require('xlsx');
 const path = require('path');
 
 // 📁 Percorso del file Excel
-const filePath = path.join(__dirname, '../data/ESTADISTICAS COM 2025.xlsx');
+const filePath = path.join(__dirname, '../data/ESTADISTICAS_COM_2025.xlsx');
 
 // 📌 Funzione per generare il riassunto per un determinato WK
 const generateSummary = (wk) => {

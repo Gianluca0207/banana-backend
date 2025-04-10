@@ -12,4 +12,5 @@ const SummaryExporterSchema = new mongoose.Schema({
   tipo208: Number
 });
 
-module.exports = mongoose.model('SummaryExporter', SummaryExporterSchema);
+// Forza la collection a chiamarsi "exporters"
+module.exports = mongoose.model('SummaryExporter', SummaryExporterSchema, 'exporters');

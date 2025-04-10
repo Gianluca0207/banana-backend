@@ -2,23 +2,23 @@ const express = require('express');
 const router = express.Router();
 const SummaryExporter = require('../models/SummaryExporter');
 
-// ✅ Rotta GET /api/mongo-summary?week=14&country=Ecuador
+// ✅ GET /api/mongo-summary → restituisce le ultime 100 righe
+// ✅ GET /api/mongo-summary?week=14&country=Ecuador&exporter=FRUTIBAN&port=ROTTERDAM
 router.get('/', async (req, res) => {
   try {
     const { week, country, exporter, port } = req.query;
-    const query = {};
 
+    const query = {};
     if (week) query.week = parseInt(week);
     if (country) query.country = country;
     if (exporter) query.exporter = exporter;
     if (port) query.destino = port;
 
-    const results = await SummaryExporter.find(query).limit(1000); // limit per sicurezza
-
+    const results = await SummaryExporter.find(query).sort({ week: -1 }).limit(100);
     res.json(results);
   } catch (error) {
-    console.error('❌ Errore nel recupero dei dati MongoDB:', error);
-    res.status(500).json({ error: 'Errore nel recupero dei dati summary da MongoDB' });
+    console.error('❌ Errore nella rotta /api/mongo-summary:', error);
+    res.status(500).json({ error: 'Errore interno nel recupero dati da MongoDB' });
   }
 });
 

@@ -13,4 +13,5 @@ const SummaryExporterSchema = new mongoose.Schema({
 });
 
 // Forza la collection a chiamarsi "exporters"
-module.exports = mongoose.model('SummaryExporter', SummaryExporterSchema, 'exporters');
+module.exports = mongoose.model('SummaryExporter', SummaryExporterSchema, 'summaryexporters');
+

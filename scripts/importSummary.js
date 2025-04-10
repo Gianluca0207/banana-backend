@@ -4,10 +4,11 @@ const path = require('path');
 const SummaryExporter = require('../models/SummaryExporter');
 
 // 📌 Modifica qui con le tue credenziali MongoDB Atlas
-mongoose.connect('mongodb+srv://bananatracker:Gp02072001@cluster0.qvz8ays.mongodb.net/exporters?retryWrites=true&w=majority&appName=Cluster0', {
+mongoose.connect('mongodb+srv://bananatracker:Gp02072001@cluster0.qvz8ays.mongodb.net/bananadatabase?retryWrites=true&w=majority&appName=Cluster0', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
+  
   
 
 const filePath = path.join(__dirname, '../data/ESTADISTICAS_COM_2025.xlsx');

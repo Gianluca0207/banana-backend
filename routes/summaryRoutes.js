@@ -2,9 +2,13 @@ const express = require('express');
 const router = express.Router();
 const xlsx = require('xlsx');
 const path = require('path');
+const fs = require('fs');
 
-// 📁 Percorso del file Excel
 const filePath = path.join(__dirname, '../data/ESTADISTICAS_COM_2025.xlsx');
+
+// Cache settimanale
+const summaryCache = new Map();
+let lastCacheUpdate = null;
 
 // 📌 Funzione per generare il riassunto per un determinato WK
 const generateSummary = (wk) => {
@@ -12,7 +16,6 @@ const generateSummary = (wk) => {
   const sheet = workbook.Sheets['BASE'];
   const data = xlsx.utils.sheet_to_json(sheet);
 
-  // Filtra i dati per la settimana selezionata (WK)
   const filteredData = data.filter(item => item.WK === wk);
 
   const vessels = {};
@@ -31,13 +34,11 @@ const generateSummary = (wk) => {
     if (item.CONSIGNATARIO) consignees.add(item.CONSIGNATARIO);
 
     if (item.BUQUES) {
-      if (!vessels[item.BUQUES]) vessels[item.BUQUES] = 0;
-      vessels[item.BUQUES] += item['22XU'] || 0;
+      vessels[item.BUQUES] = (vessels[item.BUQUES] || 0) + (item['22XU'] || 0);
     }
 
     if (item.EXPORTADORES) {
-      if (!exporters[item.EXPORTADORES]) exporters[item.EXPORTADORES] = 0;
-      exporters[item.EXPORTADORES] += item['TOTAL GENERAL'] || 0;
+      exporters[item.EXPORTADORES] = (exporters[item.EXPORTADORES] || 0) + (item['TOTAL GENERAL'] || 0);
     }
   });
 
@@ -51,7 +52,7 @@ const generateSummary = (wk) => {
     .slice(0, 3)
     .map(([exporter, quantity]) => ({ exporter, quantity }));
 
-  const summary = {
+  return {
     week: wk,
     topVessels,
     topExporters,
@@ -63,8 +64,6 @@ const generateSummary = (wk) => {
       totalShips: ships.size
     }
   };
-
-  return summary;
 };
 
 // ✅ GET /api/summary/:wk – Riassunto di una settimana specifica
@@ -74,8 +73,19 @@ router.get('/:wk', (req, res) => {
     return res.status(400).json({ error: 'Invalid WK provided' });
   }
 
+  const now = new Date();
+  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  if (summaryCache.has(wk) && lastCacheUpdate && lastCacheUpdate > oneWeekAgo) {
+    console.log(`📦 Riassunto WK${wk} servito da cache`);
+    return res.json(summaryCache.get(wk));
+  }
+
   try {
     const summary = generateSummary(wk);
+    summaryCache.set(wk, summary);
+    lastCacheUpdate = new Date();
+    console.log(`📄 Cache aggiornata per WK${wk}`);
     res.json(summary);
   } catch (error) {
     console.error('❌ Errore nel generare il riassunto:', error);
@@ -100,19 +110,13 @@ router.get('/filters/available', (req, res) => {
   }
 });
 
-const fs = require('fs');
-
-// 📁 Percorso del file Excel (riutilizzo della dichiarazione esistente)
-
 // ✅ GET /api/summary/download/estadisticas – Scarica il file Excel
 router.get('/download/estadisticas', (req, res) => {
-  // Verifica se il file esiste
   if (!fs.existsSync(filePath)) {
     console.error('❌ File non trovato:', filePath);
     return res.status(404).json({ error: 'File non trovato' });
   }
 
-  // Se il file esiste, eseguiamo il download
   res.download(filePath, 'ESTADISTICAS_COM_2025.xlsx', (err) => {
     if (err) {
       console.error('❌ Errore durante il download del file:', err);
@@ -123,4 +127,3 @@ router.get('/download/estadisticas', (req, res) => {
 });
 
 module.exports = router;
-

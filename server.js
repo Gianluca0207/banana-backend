@@ -7,16 +7,95 @@ const forecastRoutes = require('./routes/forecastRoutes');
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+// Configurazione CORS
+const corsOptions = {
+  origin: '*', // In produzione, sostituire con il dominio del frontend
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
-// 📌 Connessione al database MongoDB
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("✅ MongoDB Connesso!");
-    console.log("📂 Nome database attivo:", mongoose.connection.name);
-  })
-  .catch((error) => console.error("❌ Errore nella connessione a MongoDB:", error.message));
+// MongoDB Connection Options
+const mongoOptions = {
+  serverSelectionTimeoutMS: 30000,
+  socketTimeoutMS: 45000,
+  maxPoolSize: 50,
+  minPoolSize: 10,
+  retryWrites: true,
+  retryReads: true,
+  connectTimeoutMS: 30000,
+  heartbeatFrequencyMS: 10000,
+  maxIdleTimeMS: 60000,
+  waitQueueTimeoutMS: 30000,
+  family: 4,
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+};
+
+// 📌 Connessione al database MongoDB con retry logic
+const connectWithRetry = async () => {
+  let retries = 5;
+  while (retries > 0) {
+    try {
+      console.log("🔄 Tentativo di connessione a MongoDB...");
+      console.log("🔧 Opzioni di connessione:", JSON.stringify(mongoOptions, null, 2));
+      
+      await mongoose.connect(process.env.MONGO_URI, mongoOptions);
+      
+      console.log("✅ MongoDB Connesso!");
+      console.log("📂 Nome database attivo:", mongoose.connection.name);
+      console.log("👥 Pool size attuale:", mongoose.connection.base.connections.length);
+      
+      // Monitor connection events
+      mongoose.connection.on('connected', () => {
+        console.log('✅ MongoDB connected');
+      });
+      
+      mongoose.connection.on('disconnected', () => {
+        console.log('⚠️ MongoDB disconnected');
+      });
+      
+      mongoose.connection.on('error', (err) => {
+        console.error('❌ MongoDB error:', err);
+      });
+
+      return;
+      
+    } catch (error) {
+      console.error("❌ Errore nella connessione a MongoDB:", error.message);
+      console.error("🔍 Dettagli errore:", error);
+      
+      retries--;
+      if (retries === 0) {
+        console.error("❌ Numero massimo di tentativi raggiunto. Server in arresto.");
+        process.exit(1);
+      }
+      
+      console.log(`🔄 Tentativo di riconnessione in 5 secondi... (${retries} tentativi rimasti)`);
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+  }
+};
+
+// Avvia la connessione con retry
+connectWithRetry();
+
+// Gestione errori di connessione MongoDB
+mongoose.connection.on('error', err => {
+  console.error('❌ Errore di connessione MongoDB:', err);
+  if (err.code === 8000) { // AtlasError
+    console.error("❌ Errore di autenticazione MongoDB Atlas. Verifica le credenziali.");
+    process.exit(1);
+  }
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('⚠️ MongoDB disconnesso. Tentativo di riconnessione...');
+});
 
 // 📌 Rotte principali
 app.use("/api/auth", require("./routes/authRoutes")); // login, register, logout
@@ -29,7 +108,8 @@ app.use("/api/exporters", require("./routes/topExporters"));
 app.use("/api/fulltopexporters", require("./routes/fullTopExporters"));
 app.use("/api/weather", require("./routes/weatherRoutes"));
 app.use("/api/payments", require("./routes/paymentRoutes"));
-app.use("/api/forecast", forecastRoutes);
+app.use("/api/gdrive", require("./routes/gdriveRoutes"));
+
 
 // ✅ Nuova rotta per Exporter Data Cono Sur
 app.use("/api/conoSurexporters", require("./routes/conoSurExportersRoutes"));
@@ -39,6 +119,16 @@ app.use("/api/protected", require("./routes/protectedRoutes"));
 
 // 📂 Cartella per file statici (es. immagini caricate)
 app.use('/uploads', express.static('uploads')); 
+
+// Middleware per gestione errori globale
+app.use((err, req, res, next) => {
+  console.error('❌ Errore globale:', err);
+  res.status(500).json({
+    success: false,
+    message: 'Errore interno del server',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
 
 // 📌 Porta del server
 const PORT = process.env.PORT || 5002;

@@ -1,31 +1,36 @@
 const express = require('express');
 const router = express.Router();
-const SummaryExporter = require('../models/SummaryExporter');
+const Exporter = require('../models/Exporter');
 
 router.get('/', async (req, res) => {
   try {
-    const { week, country, exporter, port } = req.query;
-
+    const { week, country, destino, exporter } = req.query;
     const query = {};
-    if (week && week !== 'All') query.week = parseInt(week);
+    
+    // Filtri
+    if (week) query.week = Number(week);
     if (country && country !== 'All') query.country = country;
+    if (destino && destino !== 'All') query.destino = destino;
     if (exporter && exporter !== 'All') query.exporter = exporter;
-    if (port && port !== 'All') query.destino = port;
-
-    const isGenericQuery =
-      week && week !== 'All' &&
-      (!country || country === 'All') &&
-      (!port || port === 'All') &&
+    
+    // Controllo se la query è troppo generica
+    const isGenericQuery = (!week) && 
+      (!country || country === 'All') && 
+      (!destino || destino === 'All') && 
       (!exporter || exporter === 'All');
-
-    const queryBuilder = SummaryExporter.find(query).sort({ week: -1 });
+    
+    const queryBuilder = Exporter.find(query).sort({ week: -1 });
     if (isGenericQuery) queryBuilder.limit(100);
-
-    const results = await queryBuilder;
-    res.json(results);
+    
+    const data = await queryBuilder.exec();
+    
+    res.json(data);
   } catch (error) {
-    console.error('❌ Errore nella rotta /api/mongo-summary:', error);
-    res.status(500).json({ error: 'Errore interno nel recupero dati da MongoDB' });
+    console.error('Error fetching summary data:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
   }
 });
 

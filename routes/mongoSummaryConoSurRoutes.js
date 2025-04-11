@@ -4,18 +4,33 @@ const SummaryConoSur = require('../models/SummaryConoSur');
 
 router.get('/', async (req, res) => {
   try {
-    const { week, country, exporter, port } = req.query;
+    const { week, country, destino, exporter } = req.query;
     const query = {};
-    if (week) query.week = parseInt(week);
-    if (country) query.country = country;
-    if (exporter) query.exporter = exporter;
-    if (port) query.destino = port;
-
-    const results = await SummaryConoSur.find(query).sort({ week: -1 });
-    res.json(results);
+    
+    // Filtri
+    if (week) query.week = Number(week);
+    if (country && country !== 'All') query.country = country;
+    if (destino && destino !== 'All') query.destino = destino;
+    if (exporter && exporter !== 'All') query.exporter = exporter;
+    
+    // Controllo se la query è troppo generica
+    const isGenericQuery = (!week) && 
+      (!country || country === 'All') && 
+      (!destino || destino === 'All') && 
+      (!exporter || exporter === 'All');
+    
+    const queryBuilder = SummaryConoSur.find(query).sort({ week: -1 });
+    if (isGenericQuery) queryBuilder.limit(100);
+    
+    const data = await queryBuilder.exec();
+    
+    res.json(data);
   } catch (error) {
-    console.error('❌ Errore nella rotta /api/mongo-summary-conosur:', error);
-    res.status(500).json({ error: 'Errore nel caricamento dati da MongoDB' });
+    console.error('Error fetching Cono Sur data:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
   }
 });
 

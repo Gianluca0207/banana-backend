@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
     if (exporter) query.exporter = exporter;
     if (port) query.destino = port;
 
-    const results = await SummaryConoSur.find(query).sort({ week: -1 }).limit(100);
+    const results = await SummaryConoSur.find(query).sort({ week: -1 });
     res.json(results);
   } catch (error) {
     console.error('❌ Errore nella rotta /api/mongo-summary-conosur:', error);

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const SummaryConoSur = require('../models/SummaryConoSur');
+const ConoSurSummary = require('../models/ConoSurSummary');
 
 router.get('/', async (req, res) => {
   try {
@@ -19,7 +19,7 @@ router.get('/', async (req, res) => {
       (!destino || destino === 'All') && 
       (!exporter || exporter === 'All');
     
-    const queryBuilder = SummaryConoSur.find(query).sort({ week: -1 });
+    const queryBuilder = ConoSurSummary.find(query).sort({ week: -1 });
     if (isGenericQuery) queryBuilder.limit(100);
     
     const data = await queryBuilder.exec();

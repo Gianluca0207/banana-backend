@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const Exporter = require('../models/Exporter');
+const SummaryExporter = require('../models/SummaryExporter');
 
 router.get('/', async (req, res) => {
   try {
-    const { week, country, destino, exporter } = req.query;
+    const { week, country, destino, exporter, limit } = req.query;
     const query = {};
     
     // Filtri
@@ -13,16 +13,21 @@ router.get('/', async (req, res) => {
     if (destino && destino !== 'All') query.destino = destino;
     if (exporter && exporter !== 'All') query.exporter = exporter;
     
-    // Controllo se la query è troppo generica
-    const isGenericQuery = (!week) && 
-      (!country || country === 'All') && 
-      (!destino || destino === 'All') && 
-      (!exporter || exporter === 'All');
+    // Log the query for debugging
+    console.log('MongoDB query:', JSON.stringify(query));
+    console.log('Requested limit:', limit);
     
-    const queryBuilder = Exporter.find(query).sort({ week: -1 });
-    if (isGenericQuery) queryBuilder.limit(100);
+    // Build the query with sort
+    const queryBuilder = SummaryExporter.find(query).sort({ week: -1, boxes: -1 });
+    
+    // Apply limit if specified, otherwise NO LIMIT to get ALL records
+    if (limit && !isNaN(parseInt(limit))) {
+      queryBuilder.limit(parseInt(limit));
+    }
+    // No default limit - get all records if limit not specified
     
     const data = await queryBuilder.exec();
+    console.log(`Fetched ${data.length} records from MongoDB`);
     
     res.json(data);
   } catch (error) {

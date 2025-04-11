@@ -112,6 +112,8 @@ app.use("/api/payments", require("./routes/paymentRoutes"));
 app.use("/api/gdrive", require("./routes/gdriveRoutes"));
 app.use('/api/download', require('./routes/downloadRoutes'));
 app.use('/api/mongo-summary', require('./routes/mongoSummaryRoutes'));
+app.use('/api/mongo-summary-conosur', require('./routes/mongoSummaryConoSurRoutes'));
+
 
 
 

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const Subscription = require('../models/Subscription');
+const Subscription = require('../models/subscriptionModel');
 
 // 🔁 1. Controlla se il free trial è scaduto
 router.get('/check-trial/:userId', async (req, res) => {

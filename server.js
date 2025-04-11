@@ -44,14 +44,11 @@ const connectWithRetry = async () => {
     try {
       console.log("🔄 Tentativo di connessione a MongoDB...");
       console.log("🔧 Opzioni di connessione:", JSON.stringify(mongoOptions, null, 2));
-      console.log("🔌 URI di connessione (parte iniziale):", process.env.MONGO_URI.split('@')[0].replace(/:.+?@/, ':****@'));
-      console.log("🔌 URI di connessione (parte finale):", process.env.MONGO_URI.split('@')[1]);
       
       await mongoose.connect(process.env.MONGO_URI, mongoOptions);
       
       console.log("✅ MongoDB Connesso!");
       console.log("📂 Nome database attivo:", mongoose.connection.name);
-      console.log("📊 Database collections:", await mongoose.connection.db.listCollections().toArray().then(collections => collections.map(coll => coll.name).join(', ')));
       console.log("👥 Pool size attuale:", mongoose.connection.base.connections.length);
       
       // Monitor connection events

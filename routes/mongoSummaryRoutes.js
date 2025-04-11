@@ -17,7 +17,7 @@ const Summary = mongoose.model(
     consignee: String,
     boxes: Number
   }),
-  'summaries' // Collezione effettiva nel database
+  'summaryexporters' // Collezione effettiva nel database
 );
 
 // Rotta per ottenere tutti i dati di riepilogo con paginazione e filtri

@@ -17,7 +17,7 @@ const ConoSurSummary = mongoose.model(
     consignee: String,
     boxes: Number
   }),
-  'conosur_summaries' // Collezione effettiva nel database
+  'summaryconosur' // Collezione effettiva nel database
 );
 
 // Rotta per ottenere tutti i dati Cono Sur con paginazione e filtri

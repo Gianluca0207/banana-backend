@@ -7,15 +7,16 @@ router.get('/', async (req, res) => {
     const { week, country, destino, exporter, limit } = req.query;
     const query = {};
 
-    // Costruzione query base
     if (week) query.week = Number(week);
     if (country && country !== 'All') query.country = country;
     if (destino && destino !== 'All') query.destino = destino;
     if (exporter && exporter !== 'All') query.exporter = exporter;
 
-    // Identifica se la query è troppo generica
     const isGenericQuery = !week && (!country || country === 'All') && (!destino || destino === 'All') && (!exporter || exporter === 'All');
-    const appliedLimit = limit && !isNaN(parseInt(limit)) ? parseInt(limit) : (isGenericQuery ? 100 : 0); // 100 se query troppo generica
+    
+    const numericLimit = Number(limit);
+    const hasValidLimit = !isNaN(numericLimit) && numericLimit > 0;
+    const appliedLimit = hasValidLimit ? numericLimit : (isGenericQuery ? 100 : 0);
 
     console.log('📥 Query:', query, '| Limit:', appliedLimit);
 

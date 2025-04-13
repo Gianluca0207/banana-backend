@@ -21,7 +21,8 @@ router.get('/', async (req, res) => {
     console.log('📥 Query:', query, '| Limit:', appliedLimit);
 
     let queryBuilder = SummaryExporter.find(query).sort({ week: -1, boxes: -1 });
-    if (appliedLimit > 0) queryBuilder = queryBuilder.limit(appliedLimit);
+    // Forza NO LIMIT per debugging completo
+queryBuilder = queryBuilder.limit(0); // MongoDB interpreta .limit(0) come NO LIMIT
 
     const data = await queryBuilder.exec();
 

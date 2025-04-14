@@ -6,6 +6,7 @@ const {
   logoutUser,
   getCurrentUser,
   updateUserProfile,
+  resetPassword,
 } = require("../controllers/authController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -14,6 +15,7 @@ const { protect } = require("../middleware/authMiddleware");
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/logout", logoutUser);
+router.post("/reset-password", resetPassword);
 
 // 📌 Ritorna info dell'utente autenticato
 router.get("/me", protect, getCurrentUser);

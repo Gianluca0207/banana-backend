@@ -3,11 +3,21 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto'); // Import crypto for token generation
+const nodemailer = require('nodemailer'); // Add nodemailer
 
 // 🔐 Genera JWT
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "30d" });
 };
+
+// 📧 Setup Email Transporter
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER || 'bananatrackapp@gmail.com', // Use from .env or default
+    pass: process.env.EMAIL_PASSWORD || 'your_app_password_here' // Replace with actual app password
+  }
+});
 
 // 📌 REGISTRA UTENTE
 const registerUser = async (req, res) => {
@@ -254,6 +264,85 @@ const updateUserProfile = async (req, res) => {
   }
 };
 
+// 📌 RESET PASSWORD
+const resetPassword = async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({
+      success: false,
+      message: "Email is required"
+    });
+  }
+  
+  try {
+    // Normalize email
+    const normalizedEmail = email.trim().toLowerCase();
+    
+    // Find user
+    const user = await User.findOne({ email: normalizedEmail });
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+    
+    // Generate a random password (8 characters)
+    const newPassword = crypto.randomBytes(4).toString('hex');
+    
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    // Update user's password
+    user.password = hashedPassword;
+    await user.save();
+    
+    // Send email with the new password
+    const mailOptions = {
+      from: process.env.EMAIL_USER || 'bananatrackapp@gmail.com',
+      to: normalizedEmail,
+      subject: 'BananaTrack - Your Password Has Been Reset',
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: #FFD700; text-align: center;">BananaTrack</h2>
+          <p>Hello ${user.name},</p>
+          <p>Your password has been reset as requested.</p>
+          <p>Your new temporary password is: <strong>${newPassword}</strong></p>
+          <p>Please login with this password and change it immediately for security reasons.</p>
+          <p style="margin-top: 30px;">Best regards,<br>The BananaTrack Team</p>
+        </div>
+      `
+    };
+    
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error('Email sending error:', error);
+        // Still return success even if email fails, as the password was reset
+        return res.status(200).json({
+          success: true,
+          message: "Password reset successful, but email could not be sent"
+        });
+      }
+      
+      console.log('Password reset email sent:', info.response);
+      res.status(200).json({
+        success: true,
+        message: "Password reset successful. Check your email for the new password."
+      });
+    });
+    
+  } catch (error) {
+    console.error("❌ Password reset error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 // 📤 ESPORTA TUTTO
 module.exports = {
   registerUser,
@@ -261,4 +350,5 @@ module.exports = {
   logoutUser,
   getCurrentUser,
   updateUserProfile,
+  resetPassword,
 };

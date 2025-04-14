@@ -70,12 +70,12 @@ router.post('/create-checkout-session', async (req, res) => {
     };
     
     if (!plans[plan]) {
-      return res.status(400).json({ message: "Piano non valido" });
+      return res.status(400).json({ message: "Invalid plan" });
     }
     
     // URL di successo e cancellazione
-    const successUrl = `bananatrack://payment/success?userId=${userId}&plan=${plan}`;
-    const cancelUrl = `bananatrack://payment/cancel`;
+    const successUrl = `${req.protocol}://${req.get('host')}/api/payments/process-success?userId=${userId}&plan=${plan}`;
+    const cancelUrl = `${req.protocol}://${req.get('host')}/payment-cancel.html`;
     
     // Crea una sessione di checkout
     const session = await stripe.checkout.sessions.create({
@@ -269,6 +269,76 @@ router.post('/confirm-subscription', async (req, res) => {
       message: 'Error confirming subscription', 
       error: error.message 
     });
+  }
+});
+
+// Handle direct access to success page from Stripe redirect
+router.get('/process-success', async (req, res) => {
+  try {
+    const { userId, plan } = req.query;
+    
+    if (!userId || !plan) {
+      console.error('❌ Missing userId or plan in success redirect');
+      return res.status(400).send('Missing required parameters');
+    }
+    
+    // Calculate subscription dates
+    const startDate = new Date();
+    let endDate = new Date(startDate);
+    
+    if (plan === 'monthly') {
+      endDate.setMonth(startDate.getMonth() + 1);
+    } else if (plan === 'semiannual') {
+      endDate.setMonth(startDate.getMonth() + 6);
+    } else if (plan === 'annual') {
+      endDate.setFullYear(startDate.getFullYear() + 1);
+    }
+    
+    // Check for existing subscription
+    const existingSubscription = await Subscription.findOne({ user: userId });
+    
+    if (existingSubscription) {
+      // Update existing subscription
+      await Subscription.findByIdAndUpdate(
+        existingSubscription._id,
+        {
+          plan,
+          status: 'active',
+          startDate,
+          endDate,
+          lastPaymentDate: new Date(),
+          nextPaymentDate: endDate
+        }
+      );
+    } else {
+      // Create new subscription
+      await Subscription.create({
+        user: userId,
+        plan,
+        status: 'active',
+        startDate,
+        endDate,
+        lastPaymentDate: new Date(),
+        nextPaymentDate: endDate
+      });
+    }
+    
+    // Update user subscription status
+    await User.findByIdAndUpdate(userId, {
+      isSubscribed: true,
+      subscriptionPlan: plan,
+      subscriptionStartDate: startDate,
+      subscriptionEndDate: endDate,
+      isTrial: false
+    });
+    
+    console.log(`✅ Subscription processed for user: ${userId}, plan: ${plan}`);
+    
+    // Redirect to the success page
+    res.redirect(`/payment-success.html`);
+  } catch (error) {
+    console.error('❌ Error processing successful payment:', error);
+    res.status(500).send('Error processing payment. Please contact support.');
   }
 });
 

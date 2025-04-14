@@ -20,6 +20,9 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use('/data', express.static(require('path').join(__dirname, 'data')));
 
+// Serve static files from public directory
+app.use(express.static('public'));
+
 // MongoDB Connection Options
 const mongoOptions = {
   serverSelectionTimeoutMS: 30000,

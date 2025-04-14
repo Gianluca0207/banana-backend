@@ -3,6 +3,7 @@ const router = express.Router();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Subscription = require('../models/subscriptionModel');
 const User = require('../models/User');
+const crypto = require('crypto');
 
 // 🔁 1. Controlla se il free trial è scaduto
 router.get('/check-trial/:userId', async (req, res) => {
@@ -74,7 +75,7 @@ router.post('/create-checkout-session', async (req, res) => {
     }
     
     // URL di successo e cancellazione
-    const successUrl = `${req.protocol}://${req.get('host')}/api/payments/process-success?userId=${userId}&plan=${plan}`;
+    const successUrl = `${req.protocol}://${req.get('host')}/api/payments/process-success?userId=${userId}&plan=${plan}&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${req.protocol}://${req.get('host')}/payment-cancel.html`;
     
     // Crea una sessione di checkout
@@ -215,74 +216,94 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 });
 
 // 🔵 5. Endpoint per confermare l'abbonamento dopo il pagamento (chiamato dall'app mobile)
-router.post('/confirm-subscription', async (req, res) => {
+// Questo endpoint non deve essere accessibile pubblicamente, ma solo tramite webhook Stripe verificato
+// o con autenticazione forte e verifiche aggiuntive
+
+// Rimuoviamo l'endpoint vulnerabile e usiamo solo il webhook Stripe per le conferme
+// router.post('/confirm-subscription', async (req, res) => { ... });
+
+// Handle direct access to success page from Stripe redirect
+router.get('/process-success', async (req, res) => {
   try {
-    const { userId, plan } = req.body;
+    const { userId, plan, session_id } = req.query;
     
-    if (!userId || !plan) {
-      return res.status(400).json({ success: false, message: 'userId and plan are required' });
+    if (!userId || !plan || !session_id) {
+      console.error('❌ Missing required parameters in success redirect');
+      return res.status(400).send('Missing required parameters');
     }
     
-    // Verifica che l'utente esista
+    // IMPORTANTE: Verifica che la sessione Stripe esista ed è stata pagata
+    try {
+      const session = await stripe.checkout.sessions.retrieve(session_id);
+      
+      // Verifica che la sessione sia pagata e che l'utente corrisponda
+      if (session.payment_status !== 'paid') {
+        console.error('❌ Payment not completed for session:', session_id);
+        return res.status(403).send('Payment not completed. Please complete your payment first.');
+      }
+      
+      // Verifica che l'userId nel metadata della sessione corrisponda a quello nella query
+      if (session.metadata.userId !== userId) {
+        console.error('❌ User ID mismatch in success redirect');
+        return res.status(403).send('Invalid request parameters');
+      }
+      
+      // Verifica che il piano nel metadata della sessione corrisponda a quello nella query
+      if (session.metadata.plan !== plan) {
+        console.error('❌ Plan mismatch in success redirect');
+        return res.status(403).send('Invalid request parameters');
+      }
+    } catch (error) {
+      console.error('❌ Error retrieving Stripe session:', error);
+      return res.status(400).send('Invalid session ID');
+    }
+    
+    // Generate a cryptographic signature to prevent URL tampering
+    const signature = crypto.createHmac('sha256', process.env.JWT_SECRET)
+      .update(`${userId}-${plan}-${session_id}`)
+      .digest('hex');
+    
+    // Redirect to the success page with a secure token
+    res.redirect(`/payment-success.html?token=${signature}`);
+  } catch (error) {
+    console.error('❌ Error processing successful payment:', error);
+    res.status(500).send('Error processing payment. Please contact support.');
+  }
+});
+
+// Nuovo endpoint per verificare l'abbonamento sul frontend dopo redirect
+router.post('/verify-subscription', async (req, res) => {
+  try {
+    const { userId, plan, session_id, token } = req.body;
+    
+    if (!userId || !plan || !session_id || !token) {
+      return res.status(400).json({ success: false, message: 'Missing required parameters' });
+    }
+    
+    // Verifica la firma del token
+    const expectedSignature = crypto.createHmac('sha256', process.env.JWT_SECRET)
+      .update(`${userId}-${plan}-${session_id}`)
+      .digest('hex');
+    
+    if (token !== expectedSignature) {
+      return res.status(403).json({ success: false, message: 'Invalid token' });
+    }
+    
+    // Verifica che la sessione Stripe esista e sia stata pagata
+    const session = await stripe.checkout.sessions.retrieve(session_id);
+    
+    if (session.payment_status !== 'paid') {
+      return res.status(403).json({ success: false, message: 'Payment not completed' });
+    }
+    
+    // A questo punto, la conferma è sicura - possiamo aggiornare l'abbonamento
     const user = await User.findById(userId);
+    
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
     
     // Calcola le date di abbonamento
-    const startDate = new Date();
-    let endDate = new Date(startDate);
-    
-    if (plan === 'monthly') {
-      endDate.setMonth(startDate.getMonth() + 1);
-    } else if (plan === 'semiannual') {
-      endDate.setMonth(startDate.getMonth() + 6);
-    } else if (plan === 'annual') {
-      endDate.setFullYear(startDate.getFullYear() + 1);
-    }
-    
-    // Aggiorna l'utente (nel caso in cui il webhook non sia stato ricevuto)
-    await User.findByIdAndUpdate(userId, {
-      isSubscribed: true,
-      subscriptionPlan: plan,
-      subscriptionStartDate: startDate,
-      subscriptionEndDate: endDate,
-      isTrial: false
-    });
-    
-    res.json({
-      success: true,
-      user: {
-        _id: user._id,
-        email: user.email,
-        name: user.name,
-        isSubscribed: true,
-        subscriptionPlan: plan,
-        subscriptionStartDate: startDate,
-        subscriptionEndDate: endDate
-      }
-    });
-  } catch (error) {
-    console.error('❌ Errore conferma abbonamento:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error confirming subscription', 
-      error: error.message 
-    });
-  }
-});
-
-// Handle direct access to success page from Stripe redirect
-router.get('/process-success', async (req, res) => {
-  try {
-    const { userId, plan } = req.query;
-    
-    if (!userId || !plan) {
-      console.error('❌ Missing userId or plan in success redirect');
-      return res.status(400).send('Missing required parameters');
-    }
-    
-    // Calculate subscription dates
     const startDate = new Date();
     let endDate = new Date(startDate);
     
@@ -307,7 +328,8 @@ router.get('/process-success', async (req, res) => {
           startDate,
           endDate,
           lastPaymentDate: new Date(),
-          nextPaymentDate: endDate
+          nextPaymentDate: endDate,
+          chargeId: session.payment_intent // Memorizza il payment_intent per riferimento
         }
       );
     } else {
@@ -319,7 +341,8 @@ router.get('/process-success', async (req, res) => {
         startDate,
         endDate,
         lastPaymentDate: new Date(),
-        nextPaymentDate: endDate
+        nextPaymentDate: endDate,
+        chargeId: session.payment_intent
       });
     }
     
@@ -332,13 +355,24 @@ router.get('/process-success', async (req, res) => {
       isTrial: false
     });
     
-    console.log(`✅ Subscription processed for user: ${userId}, plan: ${plan}`);
+    console.log(`✅ Subscription verified and processed for user: ${userId}, plan: ${plan}`);
     
-    // Redirect to the success page
-    res.redirect(`/payment-success.html`);
+    res.json({
+      success: true, 
+      message: 'Subscription successfully activated',
+      subscription: {
+        plan,
+        startDate,
+        endDate
+      }
+    });
   } catch (error) {
-    console.error('❌ Error processing successful payment:', error);
-    res.status(500).send('Error processing payment. Please contact support.');
+    console.error('❌ Error verifying subscription:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error verifying subscription', 
+      error: error.message 
+    });
   }
 });
 

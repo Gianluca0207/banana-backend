@@ -6,71 +6,203 @@
     <title>Payment Successful - BananaTrack</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #1A1A1A;
-            color: #FFFFFF;
-            text-align: center;
-            padding: 20px;
-            margin: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f9fa;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
         }
         .container {
             max-width: 600px;
-            background-color: #262626;
-            border-radius: 10px;
-            padding: 30px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            text-align: center;
         }
-        h1 {
-            color: #FFD700;
-            margin-bottom: 20px;
+        .header {
+            margin-bottom: 30px;
         }
-        p {
+        .header h1 {
+            color: #2C3E50;
+            margin-bottom: 10px;
+        }
+        .header p {
+            color: #7F8C8D;
             font-size: 18px;
-            line-height: 1.5;
-            margin-bottom: 25px;
+        }
+        .logo {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
         }
         .success-icon {
-            font-size: 80px;
+            color: #2ECC71;
+            font-size: 60px;
             margin-bottom: 20px;
         }
-        .btn {
+        .loading {
+            margin: 30px 0;
+        }
+        .loading-spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #FFD700;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        .button {
             background-color: #FFD700;
-            color: #000000;
+            color: #333;
             border: none;
-            padding: 15px 30px;
+            padding: 12px 24px;
             border-radius: 5px;
-            font-size: 18px;
+            font-size: 16px;
             cursor: pointer;
-            font-weight: bold;
+            margin-top: 20px;
             text-decoration: none;
             display: inline-block;
-            margin-top: 20px;
             transition: background-color 0.3s;
         }
-        .btn:hover {
-            background-color: #E5C100;
+        .button:hover {
+            background-color: #f0c800;
+        }
+        .error {
+            color: #E74C3C;
+            margin-top: 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="success-icon">✅</div>
-        <h1>Payment Successful!</h1>
-        <p>Thank you for subscribing to BananaTrack. Your payment has been processed successfully and your subscription is now active.</p>
-        <p>You can now return to the app and enjoy all premium features.</p>
-        <a href="bananatrack://dashboard" class="btn">Return to App</a>
+        <div class="header">
+            <h1>BananaTrack</h1>
+            <p>Subscription Payment</p>
+        </div>
+        
+        <div id="loading" class="loading">
+            <div class="loading-spinner"></div>
+            <p>Verifying your payment...</p>
+        </div>
+        
+        <div id="success" style="display: none;">
+            <div class="success-icon">✓</div>
+            <h2>Payment Successful!</h2>
+            <p>Thank you for subscribing to BananaTrack.</p>
+            <p>Your subscription has been activated successfully.</p>
+            <p id="subscription-details"></p>
+            <a href="/" class="button">Go to Dashboard</a>
+        </div>
+        
+        <div id="error" style="display: none;">
+            <h2>Something Went Wrong</h2>
+            <p class="error" id="error-message">We couldn't verify your payment at this time.</p>
+            <p>Please contact our support team for assistance.</p>
+            <a href="/" class="button">Back to Home</a>
+        </div>
     </div>
 
     <script>
-        // Auto-redirect after 3 seconds
-        setTimeout(function() {
-            window.location.href = "bananatrack://dashboard";
-        }, 3000);
+        document.addEventListener('DOMContentLoaded', function() {
+            // Funzione per ottenere i parametri dall'URL
+            function getUrlParams() {
+                const params = new URLSearchParams(window.location.search);
+                return {
+                    token: params.get('token'),
+                    userId: params.get('userId'),
+                    plan: params.get('plan'),
+                    session_id: params.get('session_id')
+                };
+            }
+
+            // Funzione per verificare l'abbonamento
+            async function verifySubscription() {
+                const params = getUrlParams();
+                
+                // Verifica che tutti i parametri necessari siano presenti
+                if (!params.token) {
+                    showError("Missing verification token. Please try again or contact support.");
+                    return;
+                }
+                
+                try {
+                    // Recupera le informazioni dalla URL corrente
+                    const urlParams = new URL(window.location.href).searchParams;
+                    const token = urlParams.get('token');
+                    const session_id = urlParams.get('session_id');
+                    const userId = urlParams.get('userId');
+                    const plan = urlParams.get('plan');
+                    
+                    // Se mancano parametri essenziali, mostra errore
+                    if (!token || !session_id || !userId || !plan) {
+                        showError("Invalid or incomplete verification data");
+                        return;
+                    }
+                    
+                    // Richiesta API per verificare l'abbonamento
+                    const response = await fetch('/api/payments/verify-subscription', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            token,
+                            session_id,
+                            userId,
+                            plan
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Mostra i dettagli dell'abbonamento
+                        showSuccess(data.subscription);
+                    } else {
+                        showError(data.message || "Verification failed");
+                    }
+                } catch (error) {
+                    console.error("Error verifying subscription:", error);
+                    showError("An error occurred during verification");
+                }
+            }
+            
+            // Funzione per mostrare il messaggio di successo
+            function showSuccess(subscription) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('success').style.display = 'block';
+                
+                // Formatta le date per la visualizzazione
+                const startDate = new Date(subscription.startDate).toLocaleDateString();
+                const endDate = new Date(subscription.endDate).toLocaleDateString();
+                
+                // Mostra i dettagli dell'abbonamento
+                const details = document.getElementById('subscription-details');
+                details.innerHTML = `
+                    <strong>Plan:</strong> ${subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)}<br>
+                    <strong>Valid until:</strong> ${endDate}
+                `;
+            }
+            
+            // Funzione per mostrare un messaggio di errore
+            function showError(message) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error-message').textContent = message;
+            }
+            
+            // Inizia la verifica dell'abbonamento
+            verifySubscription();
+        });
     </script>
 </body>
 </html> 

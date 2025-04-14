@@ -135,20 +135,21 @@
                 }
                 
                 try {
-                    // Recupera le informazioni dalla URL corrente
-                    const urlParams = new URL(window.location.href).searchParams;
+                    // Get query parameters
+                    const urlParams = new URLSearchParams(window.location.search);
                     const token = urlParams.get('token');
                     const session_id = urlParams.get('session_id');
                     const userId = urlParams.get('userId');
                     const plan = urlParams.get('plan');
+                    const idempotency_key = urlParams.get('idempotency_key');
                     
-                    // Se mancano parametri essenziali, mostra errore
+                    // If missing essential parameters, show error
                     if (!token || !session_id || !userId || !plan) {
                         showError("Invalid or incomplete verification data");
                         return;
                     }
                     
-                    // Richiesta API per verificare l'abbonamento
+                    // API request to verify subscription
                     const response = await fetch('/api/payments/verify-subscription', {
                         method: 'POST',
                         headers: {
@@ -158,7 +159,8 @@
                             token,
                             session_id,
                             userId,
-                            plan
+                            plan,
+                            idempotencyKey: idempotency_key
                         })
                     });
                     

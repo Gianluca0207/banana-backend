@@ -4,164 +4,152 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Subscription = require('../models/subscriptionModel');
 const User = require('../models/User');
 const crypto = require('crypto');
+const { asyncHandler, AppError, ErrorTypes } = require('../middlewares/errorHandler');
+const { validatePaymentRequest } = require('../middlewares/validationMiddleware');
 
 // 🔁 1. Controlla se il free trial è scaduto
-router.get('/check-trial/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const subscription = await Subscription.findOne({ user: userId });
+router.get('/check-trial/:userId', asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const subscription = await Subscription.findOne({ user: userId });
 
-    if (!subscription) {
-      return res.status(404).json({ trialValid: false, message: 'Subscription not found' });
-    }
-
-    const now = new Date();
-    const trialValid = now < new Date(subscription.trialEnd);
-
-    res.status(200).json({ trialValid });
-  } catch (error) {
-    console.error("❌ Errore nel controllo del trial:", error.message);
-    res.status(500).json({ message: "Errore interno", error: error.message });
+  if (!subscription) {
+    throw new AppError('Subscription not found', ErrorTypes.RESOURCE_NOT_FOUND, 404);
   }
-});
+
+  const now = new Date();
+  const trialValid = now < new Date(subscription.trialEnd);
+
+  res.status(200).json({ trialValid });
+}));
 
 // 💳 2. Crea un PaymentIntent e restituisce il clientSecret
-router.post('/create-intent', async (req, res) => {
-  try {
-    const { amount } = req.body;
+router.post('/create-intent', asyncHandler(async (req, res) => {
+  const { amount } = req.body;
 
-    if (!amount) {
-      return res.status(400).json({ message: 'Amount is required' });
-    }
-
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount,
-      currency: 'usd',
-    });
-
-    res.status(200).json({ clientSecret: paymentIntent.client_secret });
-  } catch (error) {
-    console.error('❌ Errore nella creazione del PaymentIntent:', error.message);
-    res.status(500).json({ message: 'Errore nel creare PaymentIntent', error: error.message });
+  if (!amount) {
+    throw new AppError('Amount is required', ErrorTypes.VALIDATION, 400);
   }
-});
+
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount,
+    currency: 'usd',
+  });
+
+  res.status(200).json({ clientSecret: paymentIntent.client_secret });
+}));
 
 // 🔵 3. Crea una sessione di checkout Stripe e restituisce l'URL
-router.post('/create-checkout-session', async (req, res) => {
-  try {
-    const { plan, userId, email } = req.body;
-    
-    if (!plan || !userId || !email) {
-      return res.status(400).json({ message: 'Plan, userId and email are required' });
-    }
-    
-    // Generate a unique idempotency key based on user, plan and timestamp
-    const idempotencyKey = crypto.createHash('sha256')
-      .update(`${userId}-${plan}-${Date.now()}`)
-      .digest('hex');
-    
-    // Check if there's a pending payment session for this user/plan
-    const pendingSubscription = await Subscription.findOne({ 
-      user: userId, 
-      plan: plan,
-      status: 'pending',
-      paymentStatus: { $in: ['pending', 'requires_payment_method', 'requires_action'] },
-      createdAt: { $gt: new Date(Date.now() - 30 * 60 * 1000) } // Created within the last 30 minutes
+router.post('/create-checkout-session', validatePaymentRequest, asyncHandler(async (req, res) => {
+  const { plan, userId, email } = req.body;
+  
+  // Generate a unique idempotency key based on user, plan and timestamp
+  const idempotencyKey = crypto.createHash('sha256')
+    .update(`${userId}-${plan}-${Date.now()}`)
+    .digest('hex');
+  
+  // Check if there's a pending payment session for this user/plan
+  const pendingSubscription = await Subscription.findOne({ 
+    user: userId, 
+    plan: plan,
+    status: 'pending',
+    paymentStatus: { $in: ['pending', 'requires_payment_method', 'requires_action'] },
+    createdAt: { $gt: new Date(Date.now() - 30 * 60 * 1000) } // Created within the last 30 minutes
+  });
+  
+  if (pendingSubscription) {
+    // If there's a pending session, notify the frontend
+    return res.status(409).json({
+      success: false,
+      message: 'A payment for this plan is already in progress',
+      pendingPaymentId: pendingSubscription._id,
+      timeSinceCreated: Date.now() - new Date(pendingSubscription.createdAt).getTime(),
+      requiresAction: pendingSubscription.paymentStatus === 'requires_action'
     });
-    
-    if (pendingSubscription) {
-      // If there's a pending session, notify the frontend
-      return res.status(409).json({
-        success: false,
-        message: 'A payment for this plan is already in progress',
-        pendingPaymentId: pendingSubscription._id,
-        timeSinceCreated: Date.now() - new Date(pendingSubscription.createdAt).getTime(),
-        requiresAction: pendingSubscription.paymentStatus === 'requires_action'
-      });
+  }
+  
+  const plans = {
+    monthly: {
+      amount: 20000,
+      name: 'Monthly Subscription to BananaTracker'
+    },
+    semiannual: {
+      amount: 80000,
+      name: 'Semiannul Subscription to BananaTracker'
+    },
+    annual: {
+      amount: 120000,
+      name: 'Annual Subscription to BananaTracker'
     }
-    
-    const plans = {
-      monthly: {
-        amount: 20000,
-        name: 'Monthly Subscription to BananaTracker'
-      },
-      semiannual: {
-        amount: 80000,
-        name: 'Semiannul Subscription to BananaTracker'
-      },
-      annual: {
-        amount: 120000,
-        name: 'Annual Subscription to BananaTracker'
-      }
-    };
-    
-    if (!plans[plan]) {
-      return res.status(400).json({ message: "Invalid plan" });
-    }
-    
-    // URL di successo e cancellazione
-    const successUrl = `${req.protocol}://${req.get('host')}/api/payments/process-success?userId=${userId}&plan=${plan}&session_id={CHECKOUT_SESSION_ID}&idempotency_key=${idempotencyKey}`;
-    const cancelUrl = `${req.protocol}://${req.get('host')}/payment-cancel.html?userId=${userId}&plan=${plan}&idempotency_key=${idempotencyKey}&status=canceled`;
-    
-    // Calculate subscription dates
-    const startDate = new Date();
-    let endDate = new Date(startDate);
-    
-    if (plan === 'monthly') {
-      endDate.setMonth(startDate.getMonth() + 1);
-    } else if (plan === 'semiannual') {
-      endDate.setMonth(startDate.getMonth() + 6);
-    } else if (plan === 'annual') {
-      endDate.setFullYear(startDate.getFullYear() + 1);
-    }
-    
-    // Create or update subscription record with pending status
-    // This allows us to track the payment attempt even if the user cancels
-    let subscription = await Subscription.findOne({ user: userId });
-    
-    if (subscription) {
-      // If there's already a subscription, create a pending update
-      subscription.plan = plan;
-      subscription.status = 'pending';
-      subscription.paymentStatus = 'pending';
-      subscription.failureReason = null;
-      subscription.startDate = startDate;
-      subscription.endDate = endDate;
-      subscription.paymentAttempts = (subscription.paymentAttempts || 0) + 1;
-      subscription.lastPaymentAttempt = new Date();
-      subscription.idempotencyKey = idempotencyKey;
-      
-      await subscription.save();
-    } else {
-      // Create new subscription record with pending status
-      subscription = await Subscription.create({
-        user: userId,
-        plan: plan,
-        amount: plans[plan].amount,
-        status: 'pending',
-        paymentStatus: 'pending',
-        startDate: startDate,
-        endDate: endDate,
-        paymentAttempts: 1,
-        lastPaymentAttempt: new Date(),
-        idempotencyKey: idempotencyKey
-      });
-    }
-    
-    // Save the payment attempt in the history
-    if (!subscription.paymentHistory) {
-      subscription.paymentHistory = [];
-    }
-    
-    subscription.paymentHistory.push({
-      date: new Date(),
-      status: 'pending',
-      amount: plans[plan].amount,
-      idempotencyKey: idempotencyKey
-    });
+  };
+  
+  if (!plans[plan]) {
+    throw new AppError('Invalid plan', ErrorTypes.VALIDATION, 400);
+  }
+  
+  // URL di successo e cancellazione
+  const successUrl = `${req.protocol}://${req.get('host')}/api/payments/process-success?userId=${userId}&plan=${plan}&session_id={CHECKOUT_SESSION_ID}&idempotency_key=${idempotencyKey}`;
+  const cancelUrl = `${req.protocol}://${req.get('host')}/payment-cancel.html?userId=${userId}&plan=${plan}&idempotency_key=${idempotencyKey}&status=canceled`;
+  
+  // Calculate subscription dates
+  const startDate = new Date();
+  let endDate = new Date(startDate);
+  
+  if (plan === 'monthly') {
+    endDate.setMonth(startDate.getMonth() + 1);
+  } else if (plan === 'semiannual') {
+    endDate.setMonth(startDate.getMonth() + 6);
+  } else if (plan === 'annual') {
+    endDate.setFullYear(startDate.getFullYear() + 1);
+  }
+  
+  // Create or update subscription record with pending status
+  // This allows us to track the payment attempt even if the user cancels
+  let subscription = await Subscription.findOne({ user: userId });
+  
+  if (subscription) {
+    // If there's already a subscription, create a pending update
+    subscription.plan = plan;
+    subscription.status = 'pending';
+    subscription.paymentStatus = 'pending';
+    subscription.failureReason = null;
+    subscription.startDate = startDate;
+    subscription.endDate = endDate;
+    subscription.paymentAttempts = (subscription.paymentAttempts || 0) + 1;
+    subscription.lastPaymentAttempt = new Date();
+    subscription.idempotencyKey = idempotencyKey;
     
     await subscription.save();
-    
+  } else {
+    // Create new subscription record with pending status
+    subscription = await Subscription.create({
+      user: userId,
+      plan: plan,
+      amount: plans[plan].amount,
+      status: 'pending',
+      paymentStatus: 'pending',
+      startDate: startDate,
+      endDate: endDate,
+      paymentAttempts: 1,
+      lastPaymentAttempt: new Date(),
+      idempotencyKey: idempotencyKey
+    });
+  }
+  
+  // Save the payment attempt in the history
+  if (!subscription.paymentHistory) {
+    subscription.paymentHistory = [];
+  }
+  
+  subscription.paymentHistory.push({
+    date: new Date(),
+    status: 'pending',
+    amount: plans[plan].amount,
+    idempotencyKey: idempotencyKey
+  });
+  
+  await subscription.save();
+  
+  try {
     // Crea una sessione di checkout using the idempotency key to prevent duplicate charges
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -198,21 +186,26 @@ router.post('/create-checkout-session', async (req, res) => {
     // Registra i dettagli della sessione per riferimento futuro (opzionale)
     console.log(`✅ Sessione di checkout creata: ${session.id} per l'utente ${userId}, piano ${plan}, idempotencyKey: ${idempotencyKey}`);
     
-    res.json({ 
+    res.status(200).json({ 
       success: true, 
-      sessionId: session.id, 
       url: session.url,
+      sessionId: session.id,
       idempotencyKey: idempotencyKey
     });
   } catch (error) {
-    console.error('❌ Error creating checkout session:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error creating session', 
-      error: error.message 
-    });
+    // Handle Stripe errors specifically
+    if (error.type === 'StripeCardError') {
+      throw new AppError('Payment processing error: ' + error.message, ErrorTypes.PAYMENT, 402, error);
+    } else if (error.type === 'StripeInvalidRequestError') {
+      throw new AppError('Invalid payment request: ' + error.message, ErrorTypes.VALIDATION, 400, error);
+    } else if (error.type === 'StripeAPIError') {
+      throw new AppError('Stripe service error', ErrorTypes.EXTERNAL_SERVICE, 503, error);
+    } else {
+      // Re-throw other errors to be caught by the global handler
+      throw error;
+    }
   }
-});
+}));
 
 // 🔵 4. Endpoint webhook per gestire eventi Stripe
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {

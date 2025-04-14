@@ -131,15 +131,17 @@ app.use("/api/protected", require("./routes/protectedRoutes"));
 // 📂 Cartella per file statici (es. immagini caricate)
 app.use('/uploads', express.static('uploads')); 
 
+// Import error handling middleware
+const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
+
+// Route for forecasts
+app.use('/api/forecast', forecastRoutes);
+
+// 404 handler - must be before the error handler
+app.use(notFoundHandler);
+
 // Global error handling middleware
-app.use((err, req, res, next) => {
-  console.error('❌ Global error:', err);
-  res.status(500).json({
-    success: false,
-    message: 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
+app.use(errorHandler);
 
 // 📌 Porta del server
 const PORT = process.env.PORT || 5002;

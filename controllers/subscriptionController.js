@@ -124,7 +124,7 @@ const confirmSubscription = async (req, res) => {
     const { userId, plan, amount, chargeId } = req.body;
 
     if (!userId || !plan || !amount || !chargeId) {
-      return res.status(400).json({ message: "Tutti i campi sono obbligatori" });
+      return res.status(400).json({ message: "Fill all the fields" });
     }
 
     // Calcola le date di inizio e fine abbonamento

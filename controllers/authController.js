@@ -362,6 +362,67 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// 📌 CAMBIA PASSWORD UTENTE
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    
+    // Verifica che entrambi i campi siano presenti
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Current password and new password are required"
+      });
+    }
+    
+    // Verifica che la nuova password rispetti i requisiti
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters and include uppercase, lowercase, number and special character"
+      });
+    }
+    
+    // Recupera l'utente completo con la password (che normalmente è esclusa)
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+    
+    // Verifica che la password corrente sia corretta
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: "Current password is incorrect"
+      });
+    }
+    
+    // Imposta la nuova password
+    user.password = newPassword; // Il middleware pre-save si occuperà dell'hashing
+    await user.save();
+    
+    res.json({
+      success: true,
+      message: "Password changed successfully"
+    });
+    
+  } catch (error) {
+    console.error("❌ Password change error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 // 📤 ESPORTA TUTTO
 module.exports = {
   registerUser,
@@ -370,4 +431,5 @@ module.exports = {
   getCurrentUser,
   updateUserProfile,
   resetPassword,
+  changePassword,
 };

@@ -7,6 +7,7 @@ const {
   getCurrentUser,
   updateUserProfile,
   resetPassword,
+  changePassword,
 } = require("../controllers/authController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -22,5 +23,8 @@ router.get("/me", protect, getCurrentUser);
 
 // 📌 Aggiorna profilo utente
 router.put("/profile", protect, updateUserProfile);
+
+// 📌 Cambio password (richiede autenticazione)
+router.post("/change-password", protect, changePassword);
 
 module.exports = router;

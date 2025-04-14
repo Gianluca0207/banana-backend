@@ -1,7 +1,6 @@
-// models/ConoSurSummary.js
 const mongoose = require('mongoose');
 
-const ConoSurSummarySchema = new mongoose.Schema({
+const conoSurSchema = new mongoose.Schema({
   week: Number,
   exporter: String,
   consignee: String,
@@ -10,7 +9,9 @@ const ConoSurSummarySchema = new mongoose.Schema({
   destino: String,
   buque: String,
   tipo22XU: Number,
-  tipo208: Number,
-}, { timestamps: true });
+  tipo208: Number
+}, {
+  collection: 'summaryconosur'  // 💥 nome esatto come nel DB
+});
 
-module.exports = mongoose.model('ConoSurSummary', ConoSurSummarySchema);
+module.exports = mongoose.model('ConoSurSummary', conoSurSchema);

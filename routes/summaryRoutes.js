@@ -66,7 +66,7 @@ const generateSummary = (wk) => {
   };
 };
 
-// ✅ GET /api/summary/:wk – Riassunto di una settimana specifica
+// ✅ GET /api/summary/:wk – Summary for a specific week
 router.get('/:wk', (req, res) => {
   const wk = parseInt(req.params.wk);
   if (isNaN(wk)) {
@@ -77,7 +77,7 @@ router.get('/:wk', (req, res) => {
   const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   if (summaryCache.has(wk) && lastCacheUpdate && lastCacheUpdate > oneWeekAgo) {
-    console.log(`📦 Riassunto WK${wk} servito da cache`);
+    console.log(`📦 Summary WK${wk} served from cache`);
     return res.json(summaryCache.get(wk));
   }
 
@@ -85,15 +85,15 @@ router.get('/:wk', (req, res) => {
     const summary = generateSummary(wk);
     summaryCache.set(wk, summary);
     lastCacheUpdate = new Date();
-    console.log(`📄 Cache aggiornata per WK${wk}`);
+    console.log(`📄 Cache updated for WK${wk}`);
     res.json(summary);
   } catch (error) {
-    console.error('❌ Errore nel generare il riassunto:', error);
+    console.error('❌ Error generating summary:', error);
     res.status(500).json({ error: 'Failed to generate summary' });
   }
 });
 
-// ✅ GET /api/summary/filters/available – Tutte le settimane e i paesi disponibili
+// ✅ GET /api/summary/filters/available – All available weeks and countries
 router.get('/filters/available', (req, res) => {
   try {
     const workbook = xlsx.readFile(filePath);
@@ -105,8 +105,8 @@ router.get('/filters/available', (req, res) => {
 
     res.json({ weeks, countries });
   } catch (error) {
-    console.error('❌ Errore caricamento filtri:', error);
-    res.status(500).json({ error: 'Errore nel caricamento dei filtri' });
+    console.error('❌ Error loading filters:', error);
+    res.status(500).json({ error: 'Error loading filters' });
   }
 });
 

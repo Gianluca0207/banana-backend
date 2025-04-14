@@ -90,9 +90,9 @@ connectWithRetry();
 
 // Gestione errori di connessione MongoDB
 mongoose.connection.on('error', err => {
-  console.error('❌ Errore di connessione MongoDB:', err);
+  console.error('❌ MongoDB connection error:', err);
   if (err.code === 8000) { // AtlasError
-    console.error("❌ Errore di autenticazione MongoDB Atlas. Verifica le credenziali.");
+    console.error("❌ MongoDB Atlas authentication error. Check your credentials.");
     process.exit(1);
   }
 });
@@ -131,12 +131,12 @@ app.use("/api/protected", require("./routes/protectedRoutes"));
 // 📂 Cartella per file statici (es. immagini caricate)
 app.use('/uploads', express.static('uploads')); 
 
-// Middleware per gestione errori globale
+// Global error handling middleware
 app.use((err, req, res, next) => {
-  console.error('❌ Errore globale:', err);
+  console.error('❌ Global error:', err);
   res.status(500).json({
     success: false,
-    message: 'Errore interno del server',
+    message: 'Internal server error',
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });

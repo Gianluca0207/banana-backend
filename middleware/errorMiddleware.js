@@ -1,31 +1,31 @@
 // backend/middleware/errorMiddleware.js
 
-// Questo middleware gestisce l'errore 404 (risorsa non trovata)
+// This middleware handles 404 errors (resource not found)
 const notFound = (req, res, next) => {
-    // Crea un nuovo errore con un messaggio che include l'URL richiesto
-    const error = new Error(`Non trovato - ${req.originalUrl}`);
-    // Imposta lo status HTTP su 404
+    // Creates a new error with a message that includes the requested URL
+    const error = new Error(`Not found - ${req.originalUrl}`);
+    // Sets the HTTP status to 404
     res.status(404);
-    // Passa l'errore al middleware successivo
+    // Passes the error to the next middleware
     next(error);
   };
   
-  // Questo middleware centralizzato gestisce tutti gli errori
+  // This centralized middleware handles all errors
   const errorHandler = (err, req, res, next) => {
-    // Stampa l'errore nella console (utile per il debug)
+    // Prints the error to the console (useful for debugging)
     console.error(err.stack);
-    // Se lo status era 200, lo trasforma in 500 (errore interno del server)
+    // If the status was 200, changes it to 500 (internal server error)
     const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-    // Imposta lo status della risposta
+    // Sets the response status
     res.status(statusCode);
-    // Manda la risposta in formato JSON
+    // Sends the response in JSON format
     res.json({
       message: err.message,
-      // Mostra lo stack di errori solo se NON sei in produzione
+      // Shows the error stack only if NOT in production
       stack: process.env.NODE_ENV === 'production' ? null : err.stack,
     });
   };
   
-  // Esporta le funzioni per poterle usare in altri file
+  // Exports the functions to be used in other files
   module.exports = { notFound, errorHandler };
   

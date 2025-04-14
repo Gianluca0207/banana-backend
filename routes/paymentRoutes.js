@@ -112,10 +112,10 @@ router.post('/create-checkout-session', async (req, res) => {
       url: session.url 
     });
   } catch (error) {
-    console.error('❌ Errore nella creazione della sessione di checkout:', error);
+    console.error('❌ Error creating checkout session:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Errore nel creare la sessione', 
+      message: 'Error creating session', 
       error: error.message 
     });
   }

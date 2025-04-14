@@ -289,15 +289,34 @@ const resetPassword = async (req, res) => {
       });
     }
     
-    // Generate a random password (8 characters)
-    const newPassword = crypto.randomBytes(4).toString('hex');
+    // Generate a strong random password that meets requirements
+    // At least 8 chars with 1 uppercase, 1 lowercase, 1 number, 1 special character
+    const upperChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lowerChars = 'abcdefghijklmnopqrstuvwxyz';
+    const numbers = '0123456789';
+    const specialChars = '!@#$%^&*()_-+=<>?';
+    
+    // Ensure we have at least one of each required character type
+    let newPassword = '';
+    newPassword += upperChars.charAt(Math.floor(Math.random() * upperChars.length));
+    newPassword += lowerChars.charAt(Math.floor(Math.random() * lowerChars.length));
+    newPassword += numbers.charAt(Math.floor(Math.random() * numbers.length));
+    newPassword += specialChars.charAt(Math.floor(Math.random() * specialChars.length));
+    
+    // Add 4 more random characters to reach minimum 8 characters
+    const allChars = upperChars + lowerChars + numbers + specialChars;
+    for (let i = 0; i < 4; i++) {
+      newPassword += allChars.charAt(Math.floor(Math.random() * allChars.length));
+    }
+    
+    // Shuffle the password characters
+    newPassword = newPassword.split('').sort(() => 0.5 - Math.random()).join('');
     
     // Hash the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     
-    // Update user's password
-    user.password = hashedPassword;
-    await user.save();
+    // Update user's password without triggering middleware
+    await User.findByIdAndUpdate(user._id, { password: hashedPassword }, { runValidators: false });
     
     // Send email with the new password
     const mailOptions = {

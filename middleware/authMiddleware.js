@@ -16,6 +16,14 @@ const protect = async (req, res, next) => {
                 return res.status(401).json({ message: "User not found" });
             }
 
+            // Verifica se il device token corrisponde
+            const deviceId = req.headers['x-device-id'] || 'unknown';
+            if (req.user.deviceToken && req.user.deviceToken !== deviceId) {
+                return res.status(403).json({ 
+                    message: "Your session is active on another device. Please log in again." 
+                });
+            }
+            
             next();  // 🔓 Continua alla prossima funzione middleware
         } catch (error) {
             return res.status(401).json({ message: "Invalid token" });

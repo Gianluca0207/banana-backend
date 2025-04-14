@@ -129,6 +129,7 @@ const registerUser = async (req, res) => {
 // 📌 LOGIN UTENTE
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
+  const deviceId = req.headers['x-device-id'] || 'unknown';
 
   try {
     if (!email || !password) {
@@ -166,6 +167,19 @@ const loginUser = async (req, res) => {
       }
     }
 
+    // Verifica se l'utente è già loggato da un altro dispositivo
+    if (user.deviceToken && user.deviceToken !== deviceId) {
+      return res.status(403).json({
+        success: false,
+        message: "Your account is already logged in on another device. Only one device allowed at a time."
+      });
+    }
+
+    // Aggiorna device token e data ultimo login
+    user.deviceToken = deviceId;
+    user.lastLogin = new Date();
+    await user.save();
+
     const token = generateToken(user.id);
 
     res.json({
@@ -191,8 +205,21 @@ const loginUser = async (req, res) => {
 };
 
 // 📌 LOGOUT UTENTE
-const logoutUser = (req, res) => {
-  res.status(200).json({ message: "Logout successful" });
+const logoutUser = async (req, res) => {
+  try {
+    // Se l'utente è autenticato, cancella il device token
+    if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+      const token = req.headers.authorization.split(" ")[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      
+      await User.findByIdAndUpdate(decoded.id, { deviceToken: null });
+    }
+    
+    res.status(200).json({ message: "Logout successful" });
+  } catch (error) {
+    console.error("❌ Logout error:", error);
+    res.status(200).json({ message: "Logout successful" });
+  }
 };
 
 // 📌 DATI UTENTE CORRENTE

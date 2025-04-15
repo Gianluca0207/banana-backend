@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "banana-reader-456322",
+  "private_key_id": "7577fcffeeec8e4dd272b154980bf9d731bc93ea",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCxlOT5aSNQzlvJ\nncAEhWA6Tvl9cKczUnxZvgoo+dni5KKzf6FXP71TcsFmGuZIw533AupuSd1UezMC\nzqWRY7CSfJoTSkFNr4RXNNvXLMU01/hEtW4R1EAWWhD988DfvYJfLKITORNK9/Ah\n775mW+hPVKOqKEaLGUGkX0KJgLxNrchBb6KYNl+E8bziHQ4ISr+W3GIPdezD+rjj\nkrtRWhAnyJXTmAdhEOfKul9geatna3ePMxfpYvM4ce7l7bxvaKvuhdT0tK4WhvIR\nBCFjLpasOwkipOk9Z+XVD9knSEJi/jeO65M71A42qmNbEY/4kwsEt2rrZPMAcrZq\nipbENX5fAgMBAAECggEADDxBkIu1crZdLaWQWt9js3DIkOOHqaoXxkkpQwx//jmZ\nmjuDftL19P91otbcogvUYPYS9/lf5he8+ocJclyHiHhMV2Lo3/TlberG8Or1RYBR\n604C4PiaV8/p1s2KLwBMMMmO+zsWALbXlUcC++N+PKUMx8cRoTjixHQJzhaQItvm\nVahTab3nBFXfo8kwkxcX6zn4q2IJVn3bHxklbAOeClcRnhrQuQouCKnsNYlwQEkv\nPRZ6J67O98a8jZOAWe/jri2QKfla6m/bW3qOlsIk0WgrtxEduDbSTQXst6x0as/z\n5xjrsfyRGgGMqzJga0CoeuOWIeW9TtIBaESFVMXVsQKBgQDwebPzlNm8QPFoCBLS\nKzAA9C5j51f8TPLivp+H/dGy2uopV/4rOilxkzebCKQSlX+fNZcCN57nXNFXtwgf\n02iOd6gDOY4iwzi/s4x/GBxxNy/+JGGrDx8yBibDRQvXOLTvsW8Iemv7FoK5ANE8\nSpxK0voykCjZCzNVYu0eUyMkDwKBgQC9C8Gh6b8vV5EZmQzoBryE9b31PFhK+Yc/\nvSD6vKszGCM5TpcQO7daY57zbe++pnghzzyZU/CglrukoVRzrhm0ok7ulgPh4Ud2\nPJcCkchwtxBAeFynW2jnS3tepPgDOwvtEUk+/V+fUyRsiuROfBjzwSRQ9lsSpCEt\nQMQvxa1wsQKBgQCfshLBFf6qt+4ZChOFosyUNZSBH+ccU/WQgsrqwrJ5tkt+/UJ7\nbnqLRBrPSCO9e65vCmWoQUuzlb4oJBKvH/P1eJ0I1zX+++o51IDe/iIVRXMHsR1z\nPe2XiOJBFx9P5Aa0jv6PgM0ox8A0H8jT4zB7uDQTVAzsZjXG5JVXaBqUHQKBgQCR\nBkfRUmRciSzDGmqQRTqyNWM4ksaZHbvn5cs7Dym21LmQ6P1ycp1CNlJmJNxawZI/\nPaAbcA2U5I2myizjYZhOvoUW+vaXfh84UVr3mabO8WECVFOf/7wGVB2cianJsK6B\ne1VZgT6uFzZGHnbuzrzFolGd2qAbONZKxPi8PUXEwQKBgDRSvV4K8MoQ959f00v0\nDqKTYz+Dxr902WKqc4uZep95UE/o59AVVPkSaAYMdH6tUt6RS3AlmN+4Rog2Qi/D\nbV7Z6uaLLU+ts1+5EN0sVmW9owif4bd5dFkGifu0iUDyvZ4o4+AopQhZV4c5Tf2i\nRjNapP2X7H5A68r1xrlxNEyY\n-----END PRIVATE KEY-----\n",
+  "client_email": "banana-tracker-drive@banana-reader-456322.iam.gserviceaccount.com",
+  "client_id": "105396786773762436793",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/banana-tracker-drive%40banana-reader-456322.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

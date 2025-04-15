@@ -6,7 +6,8 @@ const router = express.Router();
 
 const syncFile = async (folderId, destinationPath, resLabel, res) => {
   try {
-    const workbook = await getLatestExcelFileFromFolder(folderId);
+    const fileName = path.basename(destinationPath);
+    const workbook = await getLatestExcelFileFromFolder(folderId, fileName);
 
     const buffer = Buffer.from(
       require('xlsx').write(workbook, { type: 'buffer', bookType: 'xlsx' })

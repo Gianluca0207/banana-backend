@@ -21,12 +21,12 @@ const auth = new google.auth.GoogleAuth({
   scopes: ['https://www.googleapis.com/auth/drive.readonly'],
 });
 
-async function getLatestExcelFileFromFolder(folderId) {
+async function getLatestExcelFileFromFolder(folderId, fileName) {
   const authClient = await auth.getClient();
 
   const response = await drive.files.list({
     auth: authClient,
-    q: `'${folderId}' in parents and mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'`,
+    q: `'${folderId}' in parents and mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' and name='${fileName}'`,
     orderBy: 'modifiedTime desc',
     fields: 'files(id, name, modifiedTime)',
     pageSize: 1,
@@ -34,7 +34,7 @@ async function getLatestExcelFileFromFolder(folderId) {
 
   const files = response.data.files;
   if (!files || files.length === 0) {
-    throw new Error('❌ Nessun file Excel trovato nella cartella Drive');
+    throw new Error(`❌ File Excel ${fileName} non trovato nella cartella Drive`);
   }
 
   const file = files[0];

@@ -10,7 +10,13 @@ const SummaryConoSur = require('../models/SummaryConoSur');
 let auth;
 try {
   console.log('🔄 Inizializzazione autenticazione Google Drive...');
-  const CREDENTIALS = JSON.parse(fs.readFileSync(path.join(__dirname, '../config/gdrive-creds.json'), 'utf8'));
+  // Usa il percorso corretto per Render
+  const credentialsPath = process.env.NODE_ENV === 'production' 
+    ? '/opt/render/project/src/config/gdrive-creds.json'
+    : path.join(__dirname, '../config/gdrive-creds.json');
+  
+  console.log('🔍 Percorso credenziali:', credentialsPath);
+  const CREDENTIALS = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
   
   auth = new google.auth.GoogleAuth({
     credentials: CREDENTIALS,

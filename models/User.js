@@ -51,15 +51,6 @@ const userSchema = new mongoose.Schema(
     stripeCustomerId: {
       type: String,
     },
-    // Campo per gestire dispositivo unico
-    deviceToken: {
-      type: String,
-      default: null,
-    },
-    lastLogin: {
-      type: Date,
-      default: Date.now,
-    },
   },
   { timestamps: true }
 );

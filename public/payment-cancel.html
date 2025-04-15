@@ -67,40 +67,6 @@
     </div>
 
     <script>
-        // Notify the backend of the cancellation
-        document.addEventListener('DOMContentLoaded', function() {
-            // Get query parameters
-            const urlParams = new URLSearchParams(window.location.search);
-            const userId = urlParams.get('userId');
-            const plan = urlParams.get('plan');
-            const idempotencyKey = urlParams.get('idempotency_key');
-            const status = urlParams.get('status') || 'canceled';
-            
-            if (userId && plan && idempotencyKey) {
-                // Notify the backend of the cancellation
-                fetch('/api/payments/handle-payment-status', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        userId,
-                        plan,
-                        idempotencyKey,
-                        status,
-                        cancelReason: 'user_canceled'
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Payment cancellation reported:', data);
-                })
-                .catch(error => {
-                    console.error('Error reporting payment cancellation:', error);
-                });
-            }
-        });
-        
         // Auto-redirect after 3 seconds
         setTimeout(function() {
             window.location.href = "bananatrack://dashboard";

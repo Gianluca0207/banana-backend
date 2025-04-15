@@ -3,7 +3,6 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const forecastRoutes = require('./routes/forecastRoutes');
-const { syncFiles } = require('./services/syncService');
 
 dotenv.config();
 
@@ -24,15 +23,6 @@ app.use('/data', express.static(require('path').join(__dirname, 'data')));
 // Serve static files from public directory
 app.use(express.static('public'));
 
-// Rotta base per la root path
-app.get('/', (req, res) => {
-  res.status(200).json({ 
-    message: 'BananaTrack API is running',
-    version: '1.0',
-    status: 'online'
-  });
-});
-
 // MongoDB Connection Options
 const mongoOptions = {
   serverSelectionTimeoutMS: 30000,
@@ -52,20 +42,46 @@ const mongoOptions = {
 
 // 📌 Connessione al database MongoDB con retry logic
 const connectWithRetry = async () => {
-  console.log('🔄 Tentativo di connessione a MongoDB...');
-  console.log('🔧 Opzioni di connessione:', JSON.stringify(mongoOptions, null, 2));
-  
-  try {
-    await mongoose.connect(process.env.MONGO_URI, mongoOptions);
-    console.log('✅ Connesso a MongoDB con successo!');
-    
-    // Avvia la sincronizzazione iniziale
-    console.log('🔄 Avvio sincronizzazione iniziale...');
-    await syncFiles();
-    console.log('✅ Sincronizzazione iniziale completata');
-  } catch (error) {
-    console.error('❌ Errore di connessione a MongoDB:', error);
-    setTimeout(connectWithRetry, 5000);
+  let retries = 5;
+  while (retries > 0) {
+    try {
+      console.log("🔄 Tentativo di connessione a MongoDB...");
+      console.log("🔧 Opzioni di connessione:", JSON.stringify(mongoOptions, null, 2));
+      
+      await mongoose.connect(process.env.MONGO_URI, mongoOptions);
+      
+      console.log("✅ MongoDB Connesso!");
+      console.log("📂 Nome database attivo:", mongoose.connection.name);
+      console.log("👥 Pool size attuale:", mongoose.connection.base.connections.length);
+      
+      // Monitor connection events
+      mongoose.connection.on('connected', () => {
+        console.log('✅ MongoDB connected');
+      });
+      
+      mongoose.connection.on('disconnected', () => {
+        console.log('⚠️ MongoDB disconnected');
+      });
+      
+      mongoose.connection.on('error', (err) => {
+        console.error('❌ MongoDB error:', err);
+      });
+
+      return;
+      
+    } catch (error) {
+      console.error("❌ Errore nella connessione a MongoDB:", error.message);
+      console.error("🔍 Dettagli errore:", error);
+      
+      retries--;
+      if (retries === 0) {
+        console.error("❌ Numero massimo di tentativi raggiunto. Server in arresto.");
+        process.exit(1);
+      }
+      
+      console.log(`🔄 Tentativo di riconnessione in 5 secondi... (${retries} tentativi rimasti)`);
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
   }
 };
 
@@ -115,21 +131,16 @@ app.use("/api/protected", require("./routes/protectedRoutes"));
 // 📂 Cartella per file statici (es. immagini caricate)
 app.use('/uploads', express.static('uploads')); 
 
-// Import error handling middleware
-const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
-
-// Route for forecasts
-app.use('/api/forecast', forecastRoutes);
-
-// 404 handler - must be before the error handler
-app.use(notFoundHandler);
-
 // Global error handling middleware
-app.use(errorHandler);
+app.use((err, req, res, next) => {
+  console.error('❌ Global error:', err);
+  res.status(500).json({
+    success: false,
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
 
 // 📌 Porta del server
 const PORT = process.env.PORT || 5002;
 app.listen(PORT, () => console.log(`🚀 Server in esecuzione sulla porta ${PORT}`));
-
-// Avvia lo scheduler per la sincronizzazione automatica
-require('./services/scheduler');

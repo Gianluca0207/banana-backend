@@ -16,16 +16,6 @@ const protect = async (req, res, next) => {
                 return res.status(401).json({ message: "User not found" });
             }
 
-            // Verifica se il device token corrisponde, ma solo se è già stato impostato
-            // Ignora questa verifica per utenti che non hanno ancora un deviceToken
-            const deviceId = req.headers['x-device-id'] || 'unknown';
-            if (req.user.deviceToken && req.user.deviceToken !== deviceId && 
-                !req.originalUrl.includes('/api/payments/check-trial')) {
-                return res.status(403).json({ 
-                    message: "Your session is active on another device. Please log in again." 
-                });
-            }
-            
             next();  // 🔓 Continua alla prossima funzione middleware
         } catch (error) {
             return res.status(401).json({ message: "Invalid token" });
@@ -40,7 +30,7 @@ const isAdmin = (req, res, next) => {
     if (req.user && req.user.role === "admin") {
         next();
     } else {
-        return res.status(403).json({ message: "Richiesto livello admin" });
+        return res.status(403).json({ message: "Access denied, admin only" });
     }
 };
 

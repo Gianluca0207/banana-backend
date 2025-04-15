@@ -4,29 +4,17 @@ const xlsx = require('xlsx');
 
 const drive = google.drive('v3');
 
-// Check if credentials exist and provide a fallback
-let credentials = {};
-try {
-  if (process.env.GOOGLE_DRIVE_CREDENTIALS) {
-    credentials = JSON.parse(process.env.GOOGLE_DRIVE_CREDENTIALS);
-  } else {
-    console.warn('⚠️ GOOGLE_DRIVE_CREDENTIALS not found in environment variables. Google Drive functionality will be limited.');
-  }
-} catch (error) {
-  console.error('❌ Error parsing GOOGLE_DRIVE_CREDENTIALS:', error.message);
-}
-
 const auth = new google.auth.GoogleAuth({
-  credentials,
+  credentials: JSON.parse(process.env.GOOGLE_DRIVE_CREDENTIALS),
   scopes: ['https://www.googleapis.com/auth/drive.readonly'],
 });
 
-async function getLatestExcelFileFromFolder(folderId, fileName) {
+async function getLatestExcelFileFromFolder(folderId) {
   const authClient = await auth.getClient();
 
   const response = await drive.files.list({
     auth: authClient,
-    q: `'${folderId}' in parents and mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' and name='${fileName}'`,
+    q: `'${folderId}' in parents and mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'`,
     orderBy: 'modifiedTime desc',
     fields: 'files(id, name, modifiedTime)',
     pageSize: 1,
@@ -34,7 +22,7 @@ async function getLatestExcelFileFromFolder(folderId, fileName) {
 
   const files = response.data.files;
   if (!files || files.length === 0) {
-    throw new Error(`❌ File Excel ${fileName} non trovato nella cartella Drive`);
+    throw new Error('❌ Nessun file Excel trovato nella cartella Drive');
   }
 
   const file = files[0];

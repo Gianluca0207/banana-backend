@@ -1,11 +1,17 @@
 const { google } = require('googleapis');
 const { Readable } = require('stream');
 const xlsx = require('xlsx');
+const fs = require('fs');
+const path = require('path');
 
 const drive = google.drive('v3');
 
+const credentials = JSON.parse(
+  fs.readFileSync(path.join(__dirname, '../config/gdrive-creds.json'), 'utf8')
+);
+
 const auth = new google.auth.GoogleAuth({
-  credentials: JSON.parse(process.env.GOOGLE_DRIVE_CREDENTIALS),
+  credentials,
   scopes: ['https://www.googleapis.com/auth/drive.readonly'],
 });
 

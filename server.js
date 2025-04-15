@@ -155,3 +155,6 @@ app.use(errorHandler);
 // 📌 Porta del server
 const PORT = process.env.PORT || 5002;
 app.listen(PORT, () => console.log(`🚀 Server in esecuzione sulla porta ${PORT}`));
+
+// Avvia lo scheduler per la sincronizzazione automatica
+require('./services/scheduler');

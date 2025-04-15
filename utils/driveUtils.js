@@ -2,10 +2,8 @@ const fs = require('fs');
 const { google } = require('googleapis');
 const path = require('path');
 
-// ✅ Leggi le credenziali
-const CREDENTIALS = JSON.parse(
-  fs.readFileSync(path.join(__dirname, '../gdrive-creds.json'), 'utf8')
-);
+// ✅ Leggi le credenziali dalla variabile d'ambiente
+const CREDENTIALS = JSON.parse(process.env.GOOGLE_DRIVE_CREDENTIALS);
 
 // ✅ Autenticazione
 const auth = new google.auth.GoogleAuth({

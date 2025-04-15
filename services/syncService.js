@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
 const mongoose = require('mongoose');
-const SummaryExporter = require('../models/summaryExporterModel');
-const SummaryConoSur = require('../models/summaryConoSurModel');
+const SummaryExporter = require('../models/SummaryExporter');
+const SummaryConoSur = require('../models/SummaryConoSur');
 
 const drive = google.drive('v3');
 

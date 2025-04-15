@@ -25,6 +25,7 @@ async function uploadFile(filePath, mimeType, fileName, fileId) {
 
   const res = await drive.files.update({
     fileId,
+    resource: fileMetadata,
     media,
     fields: 'id, name',
   });

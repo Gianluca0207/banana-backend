@@ -24,15 +24,39 @@ const filesToUpload = [
 
 const updateAllFiles = async () => {
   console.log('🚀 Inizio aggiornamento file su Google Drive...\n');
+  
+  let successCount = 0;
+  let errorCount = 0;
+  
   for (const file of filesToUpload) {
     try {
-      await uploadFile(file.filePath, file.mimeType, fileName = file.fileName, file.fileId);
-      console.log(`✅ File aggiornato: ${file.fileName}`);
+      // Verifica se il file esiste prima di tentare l'upload
+      if (!require('fs').existsSync(file.filePath)) {
+        throw new Error(`File non trovato: ${file.filePath}`);
+      }
+      
+      console.log(`⏳ Aggiornamento di ${file.fileName} in corso...`);
+      const result = await uploadFile(file.filePath, file.mimeType, file.fileName, file.fileId);
+      console.log(`✅ File aggiornato: ${file.fileName} (ID: ${result.id})`);
+      successCount++;
     } catch (err) {
-      console.error(`❌ Errore aggiornando ${file.fileName}:`, err.message);
+      console.error(`❌ Errore aggiornando ${file.fileName}:`);
+      console.error(`   Dettagli: ${err.message}`);
+      if (err.stack) {
+        console.error(`   Stack: ${err.stack.split('\n')[1]}`);
+      }
+      errorCount++;
     }
   }
-  console.log('\n✅ Aggiornamento completato!');
+  
+  console.log('\n📊 Riepilogo:');
+  console.log(`   ✅ File aggiornati con successo: ${successCount}/${filesToUpload.length}`);
+  if (errorCount > 0) {
+    console.log(`   ❌ File non aggiornati: ${errorCount}`);
+    console.log('\n⚠️ Alcuni file non sono stati aggiornati. Controlla gli errori sopra indicati.');
+  } else {
+    console.log('\n✅ Tutti i file sono stati aggiornati con successo!');
+  }
 };
 
 updateAllFiles();

@@ -9,17 +9,45 @@ const SummaryConoSur = require('../models/SummaryConoSur');
 // Inizializza l'autenticazione
 let auth;
 try {
+  console.log('🔄 Inizializzazione autenticazione Google Drive...');
   const credentials = JSON.parse(process.env.GOOGLE_DRIVE_CREDENTIALS);
+  
+  // Log della chiave privata (solo i primi e ultimi caratteri per sicurezza)
+  if (credentials.private_key) {
+    console.log('🔑 Inizio chiave privata:', credentials.private_key.substring(0, 30));
+    console.log('🔑 Fine chiave privata:', credentials.private_key.substring(credentials.private_key.length - 30));
+  }
   
   // Assicurati che la chiave privata sia formattata correttamente
   if (credentials.private_key) {
-    credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+    // Rimuovi eventuali spazi extra e assicurati che i caratteri di nuova riga siano corretti
+    credentials.private_key = credentials.private_key
+      .trim()
+      .replace(/\\n/g, '\n')
+      .replace(/\\r/g, '')
+      .replace(/\\/g, '');
+    
+    // Verifica che la chiave privata inizi e finisca con i delimitatori corretti
+    if (!credentials.private_key.startsWith('-----BEGIN PRIVATE KEY-----')) {
+      credentials.private_key = '-----BEGIN PRIVATE KEY-----\n' + credentials.private_key;
+    }
+    if (!credentials.private_key.endsWith('-----END PRIVATE KEY-----')) {
+      credentials.private_key = credentials.private_key + '\n-----END PRIVATE KEY-----';
+    }
+    
+    // Log della chiave privata formattata
+    console.log('🔑 Inizio chiave privata formattata:', credentials.private_key.substring(0, 30));
+    console.log('🔑 Fine chiave privata formattata:', credentials.private_key.substring(credentials.private_key.length - 30));
   }
+  
+  console.log('✅ Credenziali formattate correttamente');
   
   auth = new google.auth.GoogleAuth({
     credentials,
     scopes: ['https://www.googleapis.com/auth/drive.readonly']
   });
+  
+  console.log('✅ Autenticazione Google Drive inizializzata con successo');
 } catch (error) {
   console.error('❌ Errore nell\'inizializzazione dell\'autenticazione:', error);
   throw error;

@@ -56,7 +56,7 @@ const connectWithRetry = async () => {
   console.log('🔧 Opzioni di connessione:', JSON.stringify(mongoOptions, null, 2));
   
   try {
-    await mongoose.connect(process.env.MONGODB_URI, mongoOptions);
+    await mongoose.connect(process.env.MONGO_URI, mongoOptions);
     console.log('✅ Connesso a MongoDB con successo!');
     
     // Avvia la sincronizzazione iniziale

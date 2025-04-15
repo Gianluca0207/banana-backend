@@ -6,6 +6,19 @@ const mongoose = require('mongoose');
 const SummaryExporter = require('../models/SummaryExporter');
 const SummaryConoSur = require('../models/SummaryConoSur');
 
+// Inizializza l'autenticazione
+let auth;
+try {
+  const credentials = JSON.parse(fs.readFileSync(path.join(__dirname, '../gdrive-creds.json'), 'utf8'));
+  auth = new google.auth.GoogleAuth({
+    credentials,
+    scopes: ['https://www.googleapis.com/auth/drive.readonly']
+  });
+} catch (error) {
+  console.error('❌ Errore nell\'inizializzazione dell\'autenticazione:', error);
+  throw error;
+}
+
 const drive = google.drive('v3');
 
 // Configurazione delle cartelle e file da sincronizzare
@@ -116,56 +129,66 @@ const lastModifiedCache = new Map();
 
 // Funzione per ottenere l'ultima modifica di un file su Google Drive
 async function getLastModifiedTime(folderId, fileName) {
-  const authClient = await auth.getClient();
-  
-  const response = await drive.files.list({
-    auth: authClient,
-    q: `'${folderId}' in parents and name='${fileName}'`,
-    fields: 'files(modifiedTime)',
-    pageSize: 1
-  });
+  try {
+    const authClient = await auth.getClient();
+    
+    const response = await drive.files.list({
+      auth: authClient,
+      q: `'${folderId}' in parents and name='${fileName}'`,
+      fields: 'files(modifiedTime)',
+      pageSize: 1
+    });
 
-  const files = response.data.files;
-  if (!files || files.length === 0) {
-    throw new Error(`File ${fileName} non trovato nella cartella`);
+    const files = response.data.files;
+    if (!files || files.length === 0) {
+      throw new Error(`File ${fileName} non trovato nella cartella`);
+    }
+
+    return new Date(files[0].modifiedTime);
+  } catch (error) {
+    console.error(`❌ Errore nel recupero della data di modifica per ${fileName}:`, error);
+    throw error;
   }
-
-  return new Date(files[0].modifiedTime);
 }
 
 // Funzione per scaricare un file da Google Drive
 async function downloadFile(folderId, fileName, localPath) {
-  const authClient = await auth.getClient();
-  
-  const response = await drive.files.list({
-    auth: authClient,
-    q: `'${folderId}' in parents and name='${fileName}'`,
-    fields: 'files(id)',
-    pageSize: 1
-  });
+  try {
+    const authClient = await auth.getClient();
+    
+    const response = await drive.files.list({
+      auth: authClient,
+      q: `'${folderId}' in parents and name='${fileName}'`,
+      fields: 'files(id)',
+      pageSize: 1
+    });
 
-  const files = response.data.files;
-  if (!files || files.length === 0) {
-    throw new Error(`File ${fileName} non trovato nella cartella`);
+    const files = response.data.files;
+    if (!files || files.length === 0) {
+      throw new Error(`File ${fileName} non trovato nella cartella`);
+    }
+
+    const fileId = files[0].id;
+    const res = await drive.files.get({
+      auth: authClient,
+      fileId: fileId,
+      alt: 'media'
+    }, { responseType: 'stream' });
+
+    const chunks = [];
+    await new Promise((resolve, reject) => {
+      res.data.on('data', chunk => chunks.push(chunk));
+      res.data.on('end', resolve);
+      res.data.on('error', reject);
+    });
+
+    const buffer = Buffer.concat(chunks);
+    fs.writeFileSync(localPath, buffer);
+    console.log(`✅ File ${fileName} scaricato con successo`);
+  } catch (error) {
+    console.error(`❌ Errore nel download di ${fileName}:`, error);
+    throw error;
   }
-
-  const fileId = files[0].id;
-  const res = await drive.files.get({
-    auth: authClient,
-    fileId: fileId,
-    alt: 'media'
-  }, { responseType: 'stream' });
-
-  const chunks = [];
-  await new Promise((resolve, reject) => {
-    res.data.on('data', chunk => chunks.push(chunk));
-    res.data.on('end', resolve);
-    res.data.on('error', reject);
-  });
-
-  const buffer = Buffer.concat(chunks);
-  fs.writeFileSync(localPath, buffer);
-  console.log(`✅ File ${fileName} scaricato con successo`);
 }
 
 // Funzione principale di sincronizzazione
@@ -198,18 +221,6 @@ async function syncFiles() {
   }
   
   console.log('✅ Sincronizzazione completata');
-}
-
-// Inizializza l'autenticazione
-let auth;
-try {
-  const credentials = JSON.parse(process.env.GOOGLE_DRIVE_CREDENTIALS);
-  auth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: ['https://www.googleapis.com/auth/drive.readonly']
-  });
-} catch (error) {
-  console.error('❌ Errore nell\'inizializzazione dell\'autenticazione:', error);
 }
 
 module.exports = {

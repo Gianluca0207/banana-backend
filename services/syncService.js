@@ -2,6 +2,9 @@ const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
+const mongoose = require('mongoose');
+const SummaryExporter = require('../models/summaryExporterModel');
+const SummaryConoSur = require('../models/summaryConoSurModel');
 
 const drive = google.drive('v3');
 
@@ -10,17 +13,101 @@ const FILES_TO_SYNC = [
   {
     folderId: '1M7aq8pWKVmW28URMlp1PwQ87-ar05_iN',
     fileName: 'exporters.xlsx',
-    localPath: path.join(__dirname, '../data/exporters.xlsx')
+    localPath: path.join(__dirname, '../data/exporters.xlsx'),
+    importFunction: async (filePath) => {
+      const workbook = xlsx.readFile(filePath);
+      const sheet = workbook.Sheets['BoxType'];
+      const data = xlsx.utils.sheet_to_json(sheet, { defval: '' });
+
+      const formatted = data.map(row => ({
+        week: row.Week,
+        exporter: row.Exporter,
+        consignee: row.Consignee,
+        country: row.Country,
+        boxes: row.Boxes || 0,
+        destino: row.Destino || 'Unknown Port'
+      })).filter(item =>
+        item.week != null &&
+        item.exporter?.toString().trim() !== '' &&
+        item.country?.toString().trim() !== '' &&
+        item.boxes != null
+      );
+
+      await SummaryExporter.deleteMany({});
+      await SummaryExporter.insertMany(formatted);
+      console.log(`✅ Importati ${formatted.length} righe da exporters.xlsx in MongoDB`);
+    }
   },
   {
     folderId: '1bpXUyk1MlB3Zsx4Z6SBXZzr3efJfeDcy',
     fileName: 'ESTADISTICAS_COM_2025.xlsx',
-    localPath: path.join(__dirname, '../data/ESTADISTICAS_COM_2025.xlsx')
+    localPath: path.join(__dirname, '../data/ESTADISTICAS_COM_2025.xlsx'),
+    importFunction: async (filePath) => {
+      const workbook = xlsx.readFile(filePath);
+      const sheetName = Object.keys(workbook.Sheets).find(name => name.trim().toLowerCase() === 'base');
+      if (!sheetName) throw new Error("❌ Foglio 'BASE' non trovato nel file Excel.");
+
+      const sheet = workbook.Sheets[sheetName];
+      const data = xlsx.utils.sheet_to_json(sheet, { defval: '' });
+
+      const headerKeys = Object.keys(data[0] || {});
+      const destinoKey = headerKeys.find(k => k.toLowerCase().trim() === 'destino') || 'DESTINO';
+
+      const formatted = data.map(row => ({
+        week: row.WK,
+        exporter: row.EXPORTADORES,
+        consignee: row.CONSIGNATARIO,
+        country: row.PAIS,
+        boxes: row["TOTAL GENERAL"],
+        destino: row[destinoKey] || 'Unknown Port',
+        buque: row.BUQUES || '',
+        tipo22XU: row['22XU'] || 0,
+        tipo208: row['208'] || 0,
+      })).filter(item =>
+        item.week != null &&
+        item.exporter?.toString().trim() !== '' &&
+        item.country?.toString().trim() !== '' &&
+        item.boxes != null
+      );
+
+      await SummaryExporter.deleteMany({});
+      await SummaryExporter.insertMany(formatted);
+      console.log(`✅ Importati ${formatted.length} righe da ESTADISTICAS_COM_2025.xlsx in MongoDB`);
+    }
   },
   {
     folderId: '1YY1eN8TYDDINZ-rFOFbjFUZ9urfv2Nxj',
     fileName: 'ESTADISTICAS COM 2025 CONO SUR.xlsx',
-    localPath: path.join(__dirname, '../data/ESTADISTICAS COM 2025 CONO SUR.xlsx')
+    localPath: path.join(__dirname, '../data/ESTADISTICAS COM 2025 CONO SUR.xlsx'),
+    importFunction: async (filePath) => {
+      const workbook = xlsx.readFile(filePath);
+      const sheet = workbook.Sheets['BASE'];
+      const data = xlsx.utils.sheet_to_json(sheet, { defval: '' });
+
+      const headerKeys = Object.keys(data[0] || {});
+      const destinoKey = headerKeys.find(k => k.toLowerCase().trim() === 'destino') || 'DESTINO';
+
+      const formatted = data.map(row => ({
+        week: row.WK,
+        exporter: row.EXPORTADORES,
+        consignee: row.CONSIGNATARIO,
+        country: row.PAIS,
+        boxes: row["TOTAL GENERAL"],
+        destino: row[destinoKey] || 'Unknown Port',
+        buque: row.BUQUES || '',
+        tipo22XU: row['22XU'] || 0,
+        tipo208: row['208'] || 0,
+      })).filter(item =>
+        item.week != null &&
+        item.exporter?.toString().trim() !== '' &&
+        item.country?.toString().trim() !== '' &&
+        item.boxes != null
+      );
+
+      await SummaryConoSur.deleteMany({});
+      await SummaryConoSur.insertMany(formatted);
+      console.log(`✅ Importati ${formatted.length} righe da CONO SUR in MongoDB`);
+    }
   }
 ];
 
@@ -96,6 +183,11 @@ async function syncFiles() {
         
         console.log(`📥 File ${file.fileName} modificato, scaricamento in corso...`);
         await downloadFile(file.folderId, file.fileName, file.localPath);
+        
+        // Importa i dati in MongoDB
+        console.log(`📊 Importazione dati di ${file.fileName} in MongoDB...`);
+        await file.importFunction(file.localPath);
+        
         lastModifiedCache.set(file.fileName, lastModified);
       } else {
         console.log(`⏭️ File ${file.fileName} non modificato, skip`);

@@ -9,7 +9,7 @@ const SummaryConoSur = require('../models/SummaryConoSur');
 // Inizializza l'autenticazione
 let auth;
 try {
-  const credentials = JSON.parse(fs.readFileSync(path.join(__dirname, '../gdrive-creds.json'), 'utf8'));
+  const credentials = JSON.parse(process.env.GOOGLE_DRIVE_CREDENTIALS);
   auth = new google.auth.GoogleAuth({
     credentials,
     scopes: ['https://www.googleapis.com/auth/drive.readonly']

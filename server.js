@@ -23,6 +23,15 @@ app.use('/data', express.static(require('path').join(__dirname, 'data')));
 // Serve static files from public directory
 app.use(express.static('public'));
 
+// Rotta base per la root path
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    message: 'BananaTrack API is running',
+    version: '1.0',
+    status: 'online'
+  });
+});
+
 // MongoDB Connection Options
 const mongoOptions = {
   serverSelectionTimeoutMS: 30000,

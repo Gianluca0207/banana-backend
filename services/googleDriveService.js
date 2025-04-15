@@ -4,8 +4,20 @@ const xlsx = require('xlsx');
 
 const drive = google.drive('v3');
 
+// Check if credentials exist and provide a fallback
+let credentials = {};
+try {
+  if (process.env.GOOGLE_DRIVE_CREDENTIALS) {
+    credentials = JSON.parse(process.env.GOOGLE_DRIVE_CREDENTIALS);
+  } else {
+    console.warn('⚠️ GOOGLE_DRIVE_CREDENTIALS not found in environment variables. Google Drive functionality will be limited.');
+  }
+} catch (error) {
+  console.error('❌ Error parsing GOOGLE_DRIVE_CREDENTIALS:', error.message);
+}
+
 const auth = new google.auth.GoogleAuth({
-  credentials: JSON.parse(process.env.GOOGLE_DRIVE_CREDENTIALS),
+  credentials,
   scopes: ['https://www.googleapis.com/auth/drive.readonly'],
 });
 

@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const forecastRoutes = require('./routes/forecastRoutes');
+require('./scheduler');
 
 dotenv.config();
 

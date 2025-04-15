@@ -10,40 +10,40 @@ const SummaryConoSur = require('../models/SummaryConoSur');
 let auth;
 try {
   console.log('🔄 Inizializzazione autenticazione Google Drive...');
-  const credentials = JSON.parse(process.env.GOOGLE_DRIVE_CREDENTIALS);
+  const CREDENTIALS = JSON.parse(fs.readFileSync(path.join(__dirname, '../config/gdrive-creds.json'), 'utf8'));
   
   // Log della chiave privata (solo i primi e ultimi caratteri per sicurezza)
-  if (credentials.private_key) {
-    console.log('🔑 Inizio chiave privata:', credentials.private_key.substring(0, 30));
-    console.log('🔑 Fine chiave privata:', credentials.private_key.substring(credentials.private_key.length - 30));
+  if (CREDENTIALS.private_key) {
+    console.log('🔑 Inizio chiave privata:', CREDENTIALS.private_key.substring(0, 30));
+    console.log('🔑 Fine chiave privata:', CREDENTIALS.private_key.substring(CREDENTIALS.private_key.length - 30));
   }
   
   // Assicurati che la chiave privata sia formattata correttamente
-  if (credentials.private_key) {
+  if (CREDENTIALS.private_key) {
     // Rimuovi eventuali spazi extra e assicurati che i caratteri di nuova riga siano corretti
-    credentials.private_key = credentials.private_key
+    CREDENTIALS.private_key = CREDENTIALS.private_key
       .trim()
       .replace(/\\n/g, '\n')
       .replace(/\\r/g, '')
       .replace(/\\/g, '');
     
     // Verifica che la chiave privata inizi e finisca con i delimitatori corretti
-    if (!credentials.private_key.startsWith('-----BEGIN PRIVATE KEY-----')) {
-      credentials.private_key = '-----BEGIN PRIVATE KEY-----\n' + credentials.private_key;
+    if (!CREDENTIALS.private_key.startsWith('-----BEGIN PRIVATE KEY-----')) {
+      CREDENTIALS.private_key = '-----BEGIN PRIVATE KEY-----\n' + CREDENTIALS.private_key;
     }
-    if (!credentials.private_key.endsWith('-----END PRIVATE KEY-----')) {
-      credentials.private_key = credentials.private_key + '\n-----END PRIVATE KEY-----';
+    if (!CREDENTIALS.private_key.endsWith('-----END PRIVATE KEY-----')) {
+      CREDENTIALS.private_key = CREDENTIALS.private_key + '\n-----END PRIVATE KEY-----';
     }
     
     // Log della chiave privata formattata
-    console.log('🔑 Inizio chiave privata formattata:', credentials.private_key.substring(0, 30));
-    console.log('🔑 Fine chiave privata formattata:', credentials.private_key.substring(credentials.private_key.length - 30));
+    console.log('🔑 Inizio chiave privata formattata:', CREDENTIALS.private_key.substring(0, 30));
+    console.log('🔑 Fine chiave privata formattata:', CREDENTIALS.private_key.substring(CREDENTIALS.private_key.length - 30));
   }
   
   console.log('✅ Credenziali formattate correttamente');
   
   auth = new google.auth.GoogleAuth({
-    credentials,
+    credentials: CREDENTIALS,
     scopes: ['https://www.googleapis.com/auth/drive.readonly']
   });
   

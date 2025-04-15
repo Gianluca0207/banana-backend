@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const forecastRoutes = require('./routes/forecastRoutes');
+const { syncFiles } = require('./services/syncService');
 
 dotenv.config();
 
@@ -51,46 +52,20 @@ const mongoOptions = {
 
 // 📌 Connessione al database MongoDB con retry logic
 const connectWithRetry = async () => {
-  let retries = 5;
-  while (retries > 0) {
-    try {
-      console.log("🔄 Tentativo di connessione a MongoDB...");
-      console.log("🔧 Opzioni di connessione:", JSON.stringify(mongoOptions, null, 2));
-      
-      await mongoose.connect(process.env.MONGO_URI, mongoOptions);
-      
-      console.log("✅ MongoDB Connesso!");
-      console.log("📂 Nome database attivo:", mongoose.connection.name);
-      console.log("👥 Pool size attuale:", mongoose.connection.base.connections.length);
-      
-      // Monitor connection events
-      mongoose.connection.on('connected', () => {
-        console.log('✅ MongoDB connected');
-      });
-      
-      mongoose.connection.on('disconnected', () => {
-        console.log('⚠️ MongoDB disconnected');
-      });
-      
-      mongoose.connection.on('error', (err) => {
-        console.error('❌ MongoDB error:', err);
-      });
-
-      return;
-      
-    } catch (error) {
-      console.error("❌ Errore nella connessione a MongoDB:", error.message);
-      console.error("🔍 Dettagli errore:", error);
-      
-      retries--;
-      if (retries === 0) {
-        console.error("❌ Numero massimo di tentativi raggiunto. Server in arresto.");
-        process.exit(1);
-      }
-      
-      console.log(`🔄 Tentativo di riconnessione in 5 secondi... (${retries} tentativi rimasti)`);
-      await new Promise(resolve => setTimeout(resolve, 5000));
-    }
+  console.log('🔄 Tentativo di connessione a MongoDB...');
+  console.log('🔧 Opzioni di connessione:', JSON.stringify(mongoOptions, null, 2));
+  
+  try {
+    await mongoose.connect(process.env.MONGODB_URI, mongoOptions);
+    console.log('✅ Connesso a MongoDB con successo!');
+    
+    // Avvia la sincronizzazione iniziale
+    console.log('🔄 Avvio sincronizzazione iniziale...');
+    await syncFiles();
+    console.log('✅ Sincronizzazione iniziale completata');
+  } catch (error) {
+    console.error('❌ Errore di connessione a MongoDB:', error);
+    setTimeout(connectWithRetry, 5000);
   }
 };
 

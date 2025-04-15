@@ -7,7 +7,7 @@ const path = require('path');
 const drive = google.drive('v3');
 
 const credentials = JSON.parse(
-  fs.readFileSync(path.join(__dirname, '../config/gdrive-creds.json'), 'utf8')
+  fs.readFileSync('/persistent/config/gdrive-creds.json', 'utf8')
 );
 
 const auth = new google.auth.GoogleAuth({

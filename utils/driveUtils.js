@@ -4,7 +4,7 @@ const path = require('path');
 
 // ✅ Leggi le credenziali dal file
 const CREDENTIALS = JSON.parse(
-  fs.readFileSync(path.join(__dirname, '../config/gdrive-creds.json'), 'utf8')
+  fs.readFileSync('/persistent/config/gdrive-creds.json', 'utf8')
 );
 
 // ✅ Autenticazione

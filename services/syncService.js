@@ -10,6 +10,12 @@ const SummaryConoSur = require('../models/SummaryConoSur');
 let auth;
 try {
   const credentials = JSON.parse(process.env.GOOGLE_DRIVE_CREDENTIALS);
+  
+  // Assicurati che la chiave privata sia formattata correttamente
+  if (credentials.private_key) {
+    credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+  }
+  
   auth = new google.auth.GoogleAuth({
     credentials,
     scopes: ['https://www.googleapis.com/auth/drive.readonly']

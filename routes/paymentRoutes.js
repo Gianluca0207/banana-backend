@@ -10,14 +10,28 @@ const { validatePaymentRequest } = require('../middlewares/validationMiddleware'
 // 🔁 1. Controlla se il free trial è scaduto
 router.get('/check-trial/:userId', asyncHandler(async (req, res) => {
   const { userId } = req.params;
-  const subscription = await Subscription.findOne({ user: userId });
+  
+  // Prima cerchiamo nelle subscriptions
+  let subscription = await Subscription.findOne({ user: userId });
 
+  // Se non troviamo una subscription, controlliamo direttamente l'utente
   if (!subscription) {
-    throw new AppError('Subscription not found', ErrorTypes.RESOURCE_NOT_FOUND, 404);
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      throw new AppError('User not found', ErrorTypes.RESOURCE_NOT_FOUND, 404);
+    }
+    
+    const now = new Date();
+    // Verifica se l'utente è in trial basandosi sul modello User
+    const trialValid = user.isTrial && user.trialEndsAt && now < new Date(user.trialEndsAt);
+    
+    return res.status(200).json({ trialValid });
   }
 
+  // Procedi con la verifica basata sul modello Subscription
   const now = new Date();
-  const trialValid = now < new Date(subscription.trialEnd);
+  const trialValid = subscription.trialEnd && now < new Date(subscription.trialEnd);
 
   res.status(200).json({ trialValid });
 }));

@@ -167,8 +167,10 @@ const loginUser = async (req, res) => {
       }
     }
 
-    // Verifica se l'utente è già loggato da un altro dispositivo
-    if (user.deviceToken && user.deviceToken !== deviceId) {
+    // Se deviceId è 'unknown', non blocchiamo l'accesso per dispositivi non identificati
+    // Questo permette di accedere da dispositivi che non inviano l'header x-device-id
+    // ma comunque registriamo 'unknown' come deviceToken per sicurezza
+    if (user.deviceToken && user.deviceToken !== deviceId && user.deviceToken !== 'unknown' && deviceId !== 'unknown') {
       return res.status(403).json({
         success: false,
         message: "Your account is already logged in on another device. Only one device allowed at a time."
@@ -210,14 +212,25 @@ const logoutUser = async (req, res) => {
     // Se l'utente è autenticato, cancella il device token
     if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
       const token = req.headers.authorization.split(" ")[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
-      await User.findByIdAndUpdate(decoded.id, { deviceToken: null });
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        
+        // Usa findByIdAndUpdate per garantire che l'operazione abbia successo anche se l'utente non esiste
+        await User.findByIdAndUpdate(
+          decoded.id, 
+          { deviceToken: null },
+          { new: true, runValidators: false }
+        );
+      } catch (tokenError) {
+        // Se il token non è valido, non blocchiamo il logout
+        console.log("Token non valido durante il logout:", tokenError.message);
+      }
     }
     
     res.status(200).json({ message: "Logout successful" });
   } catch (error) {
     console.error("❌ Logout error:", error);
+    // Anche in caso di errore, consideriamo il logout riuscito
     res.status(200).json({ message: "Logout successful" });
   }
 };

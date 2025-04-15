@@ -1,6 +1,7 @@
 const fs = require('fs');
 const { google } = require('googleapis');
 const path = require('path');
+const { Readable } = require('stream');
 
 // ✅ Leggi le credenziali
 const CREDENTIALS = JSON.parse(
@@ -24,19 +25,18 @@ async function uploadFile(filePath, mimeType, fileName, fileId) {
     throw new Error(`Impossibile accedere al file: ${error.message}`);
   }
 
-  // Leggi il file in memoria per evitare problemi con gli stream
-  const fileContent = await fs.promises.readFile(filePath);
+  // Utilizza uno stream diretto dal file invece di caricarlo in memoria
+  const fileStream = fs.createReadStream(filePath);
   
   const fileMetadata = { name: fileName };
   const media = {
     mimeType,
-    body: fileContent,
+    body: fileStream
   };
 
   try {
     console.log(`🔄 Inizio upload di ${fileName} (ID: ${fileId})`);
     
-    // Forza l'uso di multipart per upload più affidabile
     const res = await drive.files.update({
       fileId,
       resource: fileMetadata,

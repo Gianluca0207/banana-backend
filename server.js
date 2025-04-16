@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const forecastRoutes = require('./routes/forecastRoutes');
+const enfundasRoutes = require('./routes/enfundasRoutes');
 require('./scheduler');
 
 dotenv.config();
@@ -23,6 +24,10 @@ app.use('/data', express.static(require('path').join(__dirname, 'data')));
 
 // Serve static files from public directory
 app.use(express.static('public'));
+
+// Routes
+app.use('/api/forecast', forecastRoutes);
+app.use('/api/enfundas', enfundasRoutes);
 
 // MongoDB Connection Options
 const mongoOptions = {

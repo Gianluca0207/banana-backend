@@ -24,6 +24,11 @@ const CONFIG = {
     folderId: '1M7aq8pWKVmW28URMlp1PwQ87-ar05_iN',
     filePath: path.join(__dirname, '../data/exporters.xlsx'),
     importScript: path.join(__dirname, '../scripts/importExporters.js')
+  },
+  enfundas: {
+    folderId: '1Fry8OAu1SHjQtCnLHwnJ2c8GuZLmMJX4',
+    filePath: path.join(__dirname, '../data/Enfundas.xlsx'),
+    importScript: path.join(__dirname, '../scripts/importEnfundas.js')
   }
 };
 

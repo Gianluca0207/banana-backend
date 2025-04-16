@@ -19,6 +19,12 @@ const filesToUpload = [
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     fileName: 'ESTADISTICAS COM 2025 CONO SUR.xlsx',
     fileId: '11GHgaNnwV-FaS_fWs-4O1vB-yVwNv061',
+  },
+  {
+    filePath: path.join(__dirname, '../data/Enfundas.xlsx'),
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    fileName: 'Enfundas.xlsx',
+    fileId: '1Fry8OAu1SHjQtCnLHwnJ2c8GuZLmMJX4',
   }
 ];
 

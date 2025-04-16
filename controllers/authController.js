@@ -134,7 +134,8 @@ const loginUser = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ 
         success: false,
-        message: "Email and password are required" 
+        errorType: "missing_fields",
+        message: "Please enter both email and password" 
       });
     }
 
@@ -143,7 +144,8 @@ const loginUser = async (req, res) => {
     if (!user) {
       return res.status(401).json({ 
         success: false,
-        message: "Invalid credentials" 
+        errorType: "invalid_email",
+        message: "No account found with this email address" 
       });
     }
 
@@ -151,7 +153,8 @@ const loginUser = async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({ 
         success: false,
-        message: "Invalid credentials" 
+        errorType: "invalid_password",
+        message: "Incorrect password. Please try again" 
       });
     }
 
@@ -161,7 +164,8 @@ const loginUser = async (req, res) => {
       if (now > new Date(user.trialEndsAt)) {
         return res.status(403).json({ 
           success: false,
-          message: "Your free trial has expired. Please subscribe to continue." 
+          errorType: "trial_expired",
+          message: "Your free trial has expired. Please subscribe to continue using the service." 
         });
       }
     }
@@ -184,7 +188,8 @@ const loginUser = async (req, res) => {
     console.error("❌ Login error:", error);
     res.status(500).json({ 
       success: false,
-      message: "Server error",
+      errorType: "server_error",
+      message: "An unexpected error occurred. Please try again later.",
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

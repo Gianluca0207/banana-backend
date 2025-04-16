@@ -4,6 +4,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const forecastRoutes = require('./routes/forecastRoutes');
 const enfundasRoutes = require('./routes/enfundasRoutes');
+const authRoutes = require('./routes/authRoutes');
 require('./scheduler');
 
 dotenv.config();
@@ -28,6 +29,7 @@ app.use(express.static('public'));
 // Routes
 app.use('/api/forecast', forecastRoutes);
 app.use('/api/enfundas', enfundasRoutes);
+app.use('/api/auth', authRoutes);
 
 // MongoDB Connection Options
 const mongoOptions = {
@@ -137,7 +139,7 @@ app.use("/api/protected", require("./routes/protectedRoutes"));
 // 📂 Cartella per file statici (es. immagini caricate)
 app.use('/uploads', express.static('uploads')); 
 
-app.use('/api/auth', require('./routes/authRoutes'));
+
 
 // Global error handling middleware
 app.use((err, req, res, next) => {

@@ -12,8 +12,8 @@ async function importEnfundasData() {
     const data = xlsx.utils.sheet_to_json(sheet);
 
     const formatted = data.map(row => ({
-      label: row.LABEL,
-      average: row['AVERAGE 2015-2024'],
+      sc: row.SC,
+      se: row.SE,
       year2024: row['2024'],
       year2025: row['2025'],
       prevision: row.PREVISION

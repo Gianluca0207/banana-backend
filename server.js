@@ -137,6 +137,8 @@ app.use("/api/protected", require("./routes/protectedRoutes"));
 // 📂 Cartella per file statici (es. immagini caricate)
 app.use('/uploads', express.static('uploads')); 
 
+app.use('/api/auth', require('./routes/authRoutes'));
+
 // Global error handling middleware
 app.use((err, req, res, next) => {
   console.error('❌ Global error:', err);

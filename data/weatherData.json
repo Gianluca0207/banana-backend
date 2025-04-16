@@ -1,7 +1,7 @@
 {
     "alert": "⚠️ Heavy rain expected in El Oro",
     "data": {
-      "Guayas": { "temperature": 30, "humidity": 73, "description": "Partly Cloudy" },
+      "Guayas": { "temperature": 28, "humidity": 73, "description": "Partly Cloudy" },
       "Los Rios": { "temperature": 29, "humidity": 75, "description": "Sunny" },
       "El Oro": { "temperature": 30, "humidity": 80, "description": "Rainy" },
       "Santa Elena": { "temperature": 28, "humidity": 70, "description": "Cloudy" }

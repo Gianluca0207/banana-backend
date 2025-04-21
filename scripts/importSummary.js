@@ -30,17 +30,25 @@ async function importSummaryData() {
     const headerKeys = Object.keys(data[0] || {});
     const destinoKey = headerKeys.find(k => k.toLowerCase().trim() === 'destino') || 'DESTINO';
 
-    const formatted = data.map(row => ({
-      week: row.WK,
-      exporter: row.EXPORTADORES,
-      consignee: row.CONSIGNATARIO,
-      country: row.PAIS,
-      boxes: row["TOTAL GENERAL"],
-      destino: row[destinoKey] || 'Unknown Port',
-      buque: row.BUQUES || '',
-      tipo22XU: row['22XU'] || 0,
-      tipo208: row['208'] || 0,
-    })).filter(item =>
+    const formatted = data.map(row => {
+      // Estrai il nome del buque dalla colonna __EMPTY se presente
+      let buque = '';
+      if (row.__EMPTY && row.__EMPTY.includes('BUQUE:')) {
+        buque = row.__EMPTY.split('BUQUE:')[1].trim();
+      }
+
+      return {
+        week: row.WK,
+        exporter: row.EXPORTADORES,
+        consignee: row.CONSIGNATARIO,
+        country: row.PAIS,
+        boxes: row["TOTAL GENERAL"],
+        destino: row[destinoKey] || 'Unknown Port',
+        buque: buque,
+        tipo22XU: row['22XU'] || 0,
+        tipo208: row['208'] || 0,
+      };
+    }).filter(item =>
       item.week != null &&
       item.exporter?.toString().trim() !== '' &&
       item.country?.toString().trim() !== '' &&

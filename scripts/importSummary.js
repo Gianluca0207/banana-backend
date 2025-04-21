@@ -6,6 +6,8 @@ const SummaryExporter = require('../models/SummaryExporter');
 mongoose.connect('mongodb+srv://bananatracker:Gp02072001@cluster0.qvz8ays.mongodb.net/bananadatabase?retryWrites=true&w=majority&appName=Cluster0', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
+  connectTimeoutMS: 30000, // 30 secondi
+  socketTimeoutMS: 45000,  // 45 secondi
 });
 
 const filePath = path.join(__dirname, '../data/ESTADISTICAS_COM_2025.xlsx');
@@ -15,7 +17,6 @@ async function importSummaryData() {
     const workbook = xlsx.readFile(filePath);
     console.log('📄 Nomi dei fogli presenti:', workbook.SheetNames);
 
-    // Cerca il foglio chiamato "BASE" (anche se ha spazi)
     const sheetName = workbook.SheetNames.find(name => name.trim().toLowerCase() === 'base');
     if (!sheetName) {
       throw new Error("❌ Foglio 'BASE' non trovato nel file Excel.");
@@ -28,41 +29,50 @@ async function importSummaryData() {
     console.log('🔍 Prime 2 righe:', data.slice(0, 2));
 
     const headerKeys = Object.keys(data[0] || {});
-    const destinoKey = headerKeys.find(k => k.toLowerCase().trim() === 'destino') || 'DESTINO';
+    console.log('🔑 Colonne disponibili:', headerKeys);
 
     const formatted = data.map(row => {
-      // Estrai il nome del buque dalla colonna __EMPTY se presente
       let buque = '';
-      if (row.__EMPTY && row.__EMPTY.includes('BUQUE:')) {
-        buque = row.__EMPTY.split('BUQUE:')[1].trim();
+      if (row.BUQUES && row.BUQUES.includes('BUQUE:')) {
+        buque = row.BUQUES.split('BUQUE:')[1].trim();
       }
 
       return {
         week: row.WK,
-        exporter: row.EXPORTADORES,
-        consignee: row.CONSIGNATARIO,
-        country: row.PAIS,
-        boxes: row["TOTAL GENERAL"],
-        destino: row[destinoKey] || 'Unknown Port',
+        exporter: row.EXPORTADORES?.toString().trim(),
+        consignee: row.CONSIGNATARIO?.toString().trim(),
+        country: row.PAIS?.toString().trim(),
+        boxes: Number(row["TOTAL GENERAL"]) || 0,
+        destino: row.DESTINO?.toString().trim() || 'Unknown Port',
         buque: buque,
-        tipo22XU: row['22XU'] || 0,
-        tipo208: row['208'] || 0,
+        tipo22XU: Number(row['22XU']) || 0,
+        tipo208: Number(row['208']) || 0,
       };
     }).filter(item =>
       item.week != null &&
-      item.exporter?.toString().trim() !== '' &&
-      item.country?.toString().trim() !== '' &&
+      item.exporter &&
+      item.country &&
       item.boxes != null
     );
 
-    await SummaryExporter.deleteMany({});
-    await SummaryExporter.insertMany(formatted);
+    console.log('✅ Dati formattati:', formatted.length);
+    console.log('🔍 Esempio dati formattati:', formatted[0]);
 
-    console.log(`✅ Importati ${formatted.length} righe da ESTADISTICAS_COM_2025.xlsx`);
+    await SummaryExporter.deleteMany({});
+    console.log('🗑️ Vecchi dati eliminati');
+
+    const result = await SummaryExporter.insertMany(formatted);
+    console.log(`✅ Importati ${result.length} righe nel database`);
+
+    // Verifica il conteggio nel database
+    const count = await SummaryExporter.countDocuments();
+    console.log(`📊 Totale documenti nel database: ${count}`);
+
     mongoose.disconnect();
   } catch (error) {
     console.error('❌ Errore durante l\'importazione summary:', error);
     mongoose.disconnect();
+    process.exit(1);
   }
 }
 

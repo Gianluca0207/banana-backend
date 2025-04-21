@@ -4,7 +4,7 @@ const SummaryExporter = require('../models/SummaryExporter');
 
 router.get('/', async (req, res) => {
   try {
-    const { week, country, destino, exporter, limit } = req.query;
+    const { week, country, destino, exporter } = req.query;
     const query = {};
 
     if (week) query.week = Number(week);
@@ -12,19 +12,15 @@ router.get('/', async (req, res) => {
     if (destino && destino !== 'All') query.destino = destino;
     if (exporter && exporter !== 'All') query.exporter = exporter;
 
-    const isGenericQuery = !week && (!country || country === 'All') && (!destino || destino === 'All') && (!exporter || exporter === 'All');
-    
-    const numericLimit = Number(limit);
-    const hasValidLimit = !isNaN(numericLimit) && numericLimit > 0;
-    const appliedLimit = hasValidLimit ? numericLimit : (isGenericQuery ? 100 : 0);
+    console.log('📥 Query:', query);
 
-    console.log('📥 Query:', query, '| Limit:', appliedLimit);
+    const data = await SummaryExporter.find(query)
+      .sort({ week: -1, boxes: -1 })
+      .exec();
 
-    let queryBuilder = SummaryExporter.find(query).sort({ week: -1, boxes: -1 });
-    // Forza NO LIMIT per debugging completo
-queryBuilder = queryBuilder.limit(0); // MongoDB interpreta .limit(0) come NO LIMIT
-
-    const data = await queryBuilder.exec();
+    if (!data || data.length === 0) {
+      console.log('⚠️ Nessun dato trovato per la query:', query);
+    }
 
     res.json(data);
   } catch (error) {

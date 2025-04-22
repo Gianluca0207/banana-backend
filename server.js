@@ -3,9 +3,6 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const path = require('path');
-const forecastRoutes = require('./routes/forecastRoutes');
-const enfundasRoutes = require('./routes/enfundasRoutes');
-const authRoutes = require('./routes/authRoutes');
 require('./scheduler');
 
 dotenv.config();
@@ -26,11 +23,6 @@ app.use('/data', express.static(path.join(__dirname, 'data')));
 
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Routes
-app.use('/api/forecast', forecastRoutes);
-app.use('/api/enfundas', enfundasRoutes);
-app.use('/api/auth', authRoutes);
 
 // MongoDB Connection Options
 const mongoOptions = {
@@ -125,6 +117,8 @@ app.use("/api/gdrive", require(path.join(__dirname, "routes/gdriveRoutes")));
 app.use('/api/download', require(path.join(__dirname, './routes/downloadRoutes')));
 app.use('/api/mongo-summary', require(path.join(__dirname, './routes/mongoSummaryRoutes')));
 app.use('/api/mongo-summary-conosur', require(path.join(__dirname, './routes/mongoSummaryConoSurRoutes')));
+app.use('/api/forecast', require(path.join(__dirname, './routes/forecastRoutes')));
+app.use('/api/enfundas', require(path.join(__dirname, './routes/enfundasRoutes')));
 
 // ✅ Nuova rotta per Exporter Data Cono Sur
 app.use("/api/conoSurexporters", require(path.join(__dirname, "./routes/conoSurExportersRoutes")));

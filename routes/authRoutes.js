@@ -11,7 +11,7 @@ const {
 } = require("../controllers/authController");
 
 const { protect } = require("../middleware/authMiddleware");
-const User = require("../models/userModel");
+const User = require("../models/User");
 
 // 📌 Rotte per Registrazione, Login, Logout
 router.post("/register", registerUser);

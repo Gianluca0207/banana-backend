@@ -2,6 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const mongoose = require("mongoose");
+const path = require('path');
 const forecastRoutes = require('./routes/forecastRoutes');
 const enfundasRoutes = require('./routes/enfundasRoutes');
 const authRoutes = require('./routes/authRoutes');
@@ -21,10 +22,10 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
-app.use('/data', express.static(require('path').join(__dirname, 'data')));
+app.use('/data', express.static(path.join(__dirname, 'data')));
 
 // Serve static files from public directory
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Routes
 app.use('/api/forecast', forecastRoutes);
@@ -110,36 +111,29 @@ mongoose.connection.on('disconnected', () => {
 });
 
 // 📌 Rotte principali
-app.use("/api/auth", require("./routes/authRoutes")); // login, register, logout
-app.use("/api/users", require("./routes/userRoutes")); // nuova rotta: /api/users/me
-app.use("/api/excel", require("./routes/chartRoutes"));
-app.use("/api/subscriptions", require("./routes/subscriptionRoutes"));  // 🔥 Corretta questa linea
-app.use("/api/renewals", require("./routes/renewalRoutes")); // 🔥 Nuova rotta per i rinnovi
-app.use("/api/summary", require("./routes/summaryRoutes"));
-app.use("/api/exporters", require("./routes/topExporters"));
-app.use("/api/fulltopexporters", require("./routes/fullTopExporters"));
-app.use("/api/weather", require("./routes/weatherRoutes"));
-app.use("/api/payments", require("./routes/paymentRoutes"));
-app.use("/api/gdrive", require("./routes/gdriveRoutes"));
-app.use('/api/download', require('./routes/downloadRoutes'));
-app.use('/api/mongo-summary', require('./routes/mongoSummaryRoutes'));
-app.use('/api/mongo-summary-conosur', require('./routes/mongoSummaryConoSurRoutes'));
-
-
-
-
-
+app.use("/api/auth", require(path.join(__dirname, "routes/authRoutes"))); // login, register, logout
+app.use("/api/users", require(path.join(__dirname, "routes/userRoutes"))); // nuova rotta: /api/users/me
+app.use("/api/excel", require(path.join(__dirname, "routes/chartRoutes")));
+app.use("/api/subscriptions", require(path.join(__dirname, "routes/subscriptionRoutes")));  // 🔥 Corretta questa linea
+app.use("/api/renewals", require(path.join(__dirname, "routes/renewalRoutes"))); // 🔥 Nuova rotta per i rinnovi
+app.use("/api/summary", require(path.join(__dirname, "routes/summaryRoutes")));
+app.use("/api/exporters", require(path.join(__dirname, "routes/topExporters")));
+app.use("/api/fulltopexporters", require(path.join(__dirname, "routes/fullTopExporters")));
+app.use("/api/weather", require(path.join(__dirname, "routes/weatherRoutes")));
+app.use("/api/payments", require(path.join(__dirname, "routes/paymentRoutes")));
+app.use("/api/gdrive", require(path.join(__dirname, "routes/gdriveRoutes")));
+app.use('/api/download', require(path.join(__dirname, './routes/downloadRoutes')));
+app.use('/api/mongo-summary', require(path.join(__dirname, './routes/mongoSummaryRoutes')));
+app.use('/api/mongo-summary-conosur', require(path.join(__dirname, './routes/mongoSummaryConoSurRoutes')));
 
 // ✅ Nuova rotta per Exporter Data Cono Sur
-app.use("/api/conoSurexporters", require("./routes/conoSurExportersRoutes"));
+app.use("/api/conoSurexporters", require(path.join(__dirname, "./routes/conoSurExportersRoutes")));
 
 // ✅ Nuove rotte protette che richiedono una subscription attiva
-app.use("/api/protected", require("./routes/protectedRoutes"));
+app.use("/api/protected", require(path.join(__dirname, "./routes/protectedRoutes")));
 
 // 📂 Cartella per file statici (es. immagini caricate)
-app.use('/uploads', express.static('uploads')); 
-
-
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); 
 
 // Global error handling middleware
 app.use((err, req, res, next) => {

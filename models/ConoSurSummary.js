@@ -9,7 +9,8 @@ const conoSurSchema = new mongoose.Schema({
   destino: String,
   buque: String,
   tipo22XU: Number,
-  tipo208: Number
+  tipo208: Number,
+  brands: String
 }, {
   collection: 'summaryconosur'  // 💥 nome esatto come nel DB
 });

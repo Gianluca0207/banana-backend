@@ -22,14 +22,15 @@ async function importData() {
 
     const formatted = data.map(row => ({
       week: row.WK,
-      exporter: row.EXPORTADORES,
-      consignee: row.CONSIGNATARIO,
-      country: row.PAIS,
-      boxes: row["TOTAL GENERAL"],
-      destino: row[destinoKey] || 'Unknown Port',
+      exporter: row.EXPORTADORES?.toString().trim(),
+      consignee: row.CONSIGNATARIO?.toString().trim(),
+      country: row.PAIS?.toString().trim(),
+      boxes: Number(row["TOTAL GENERAL"]) || 0,
+      destino: row.DESTINO?.toString().trim() || 'Unknown Port',
       buque: row.BUQUES || '',
-      tipo22XU: row['22XU'] || 0,
-      tipo208: row['208'] || 0,
+      tipo22XU: Number(row['22XU']) || 0,
+      tipo208: Number(row['208']) || 0,
+      brands: row.MARCAS?.toString().trim() || '',
     })).filter(item =>
       item.week != null &&
       item.exporter?.toString().trim() !== '' &&

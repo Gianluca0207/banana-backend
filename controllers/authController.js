@@ -23,21 +23,28 @@ const transporter = nodemailer.createTransport({
 const registerUser = async (req, res) => {
   const { name, email, password, phone, deviceId } = req.body;
 
-  console.log("📥 Dati ricevuti:", { ...req.body, password: '***' }); // Nascondi la password nei log
+  console.log("📥 Dati ricevuti:", { ...req.body, password: '***' });
 
   try {
     // Validazione input
     if (!name || !email || !password || !phone || !deviceId) {
+      const missingFields = {
+        name: !name,
+        email: !email,
+        password: !password,
+        phone: !phone,
+        deviceId: !deviceId
+      };
+      
+      const missingFieldNames = Object.entries(missingFields)
+        .filter(([_, isMissing]) => isMissing)
+        .map(([field]) => field)
+        .join(', ');
+        
       return res.status(400).json({ 
         success: false,
-        message: "All fields are required",
-        missingFields: {
-          name: !name,
-          email: !email,
-          password: !password,
-          phone: !phone,
-          deviceId: !deviceId
-        }
+        message: `Missing required fields: ${missingFieldNames}`,
+        missingFields
       });
     }
 
@@ -46,7 +53,7 @@ const registerUser = async (req, res) => {
     if (!emailRegex.test(email)) {
       return res.status(400).json({ 
         success: false,
-        message: "Invalid email format" 
+        message: "Invalid email format. Please enter a valid email address." 
       });
     }
 
@@ -54,7 +61,7 @@ const registerUser = async (req, res) => {
     if (password.length < 6) {
       return res.status(400).json({ 
         success: false,
-        message: "Password must be at least 6 characters long" 
+        message: "Password must be at least 6 characters long." 
       });
     }
 
@@ -66,7 +73,7 @@ const registerUser = async (req, res) => {
     if (userExists) {
       return res.status(400).json({ 
         success: false,
-        message: "Email already registered" 
+        message: "This email is already registered. Please use a different email or try to login." 
       });
     }
 
@@ -116,12 +123,19 @@ const registerUser = async (req, res) => {
         maxDevices: user.maxDevices
       }
     });
-
   } catch (error) {
     console.error("❌ Registration error:", error);
+    
+    if (error.code === 11000) {
+      return res.status(400).json({ 
+        success: false,
+        message: "This email is already registered. Please use a different email or try to login." 
+      });
+    }
+    
     res.status(500).json({ 
       success: false,
-      message: "An unexpected error occurred. Please try again later.",
+      message: "Registration failed. Please try again later.",
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

@@ -69,23 +69,33 @@ router.get('/filters', async (req, res) => {
     if (destino && destino !== 'All') query.destino = destino;
     if (exporter && exporter !== 'All') query.exporter = exporter;
 
-    // Ottieni i valori unici per ogni campo
+    // Ottieni i valori unici per ogni campo con gestione degli errori
     const [weeks, countries, ports, exporters] = await Promise.all([
-      SummaryExporter.distinct('week', query).sort((a, b) => a - b),
-      SummaryExporter.distinct('country', query).sort(),
-      SummaryExporter.distinct('destino', query).sort(),
-      SummaryExporter.distinct('exporter', query).sort()
+      SummaryExporter.distinct('week', query).catch(() => []),
+      SummaryExporter.distinct('country', query).catch(() => []),
+      SummaryExporter.distinct('destino', query).catch(() => []),
+      SummaryExporter.distinct('exporter', query).catch(() => [])
     ]);
 
+    // Filtra valori null/undefined e ordina
+    const cleanWeeks = [...new Set(weeks.filter(w => w != null))].sort((a, b) => a - b);
+    const cleanCountries = [...new Set(countries.filter(c => c != null))].sort();
+    const cleanPorts = [...new Set(ports.filter(p => p != null))].sort();
+    const cleanExporters = [...new Set(exporters.filter(e => e != null))].sort();
+
     res.json({
-      weeks,
-      countries: ['All', ...countries],
-      ports: ['All', ...ports],
-      exporters: ['All', ...exporters]
+      weeks: cleanWeeks,
+      countries: ['All', ...cleanCountries],
+      ports: ['All', ...cleanPorts],
+      exporters: ['All', ...cleanExporters]
     });
   } catch (error) {
     console.error('❌ Errore fetch filters:', error);
-    res.status(500).json({ error: 'Server error', message: error.message });
+    res.status(500).json({ 
+      error: 'Server error', 
+      message: error.message,
+      details: 'Error fetching filters from database'
+    });
   }
 });
 

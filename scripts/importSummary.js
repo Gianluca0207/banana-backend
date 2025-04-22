@@ -64,7 +64,6 @@ async function importSummaryData() {
     const result = await SummaryExporter.insertMany(formatted);
     console.log(`✅ Importati ${result.length} righe nel database`);
 
-    // Verifica il conteggio nel database
     const count = await SummaryExporter.countDocuments();
     console.log(`📊 Totale documenti nel database: ${count}`);
 

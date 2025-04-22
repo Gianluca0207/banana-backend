@@ -128,7 +128,7 @@ const registerUser = async (req, res) => {
 
 // 📌 LOGIN UTENTE
 const loginUser = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, deviceId } = req.body;
 
   try {
     if (!email || !password) {
@@ -136,6 +136,14 @@ const loginUser = async (req, res) => {
         success: false,
         errorType: "missing_fields",
         message: "Please enter both email and password" 
+      });
+    }
+
+    if (!deviceId) {
+      return res.status(400).json({ 
+        success: false,
+        errorType: "missing_device_id",
+        message: "Device ID is required" 
       });
     }
 
@@ -170,6 +178,29 @@ const loginUser = async (req, res) => {
       }
     }
 
+    // Verifica se il dispositivo è già registrato
+    const existingDevice = user.activeDevices.find(d => d.deviceId === deviceId);
+    if (existingDevice) {
+      existingDevice.lastLogin = new Date();
+      await user.save();
+    } else if (user.activeDevices.length >= user.maxDevices) {
+      return res.status(403).json({ 
+        success: false,
+        errorType: "device_limit_exceeded",
+        message: "You're trying to access from a third device. Maximum 2 devices allowed per account. Please remove a device from your account settings or contact support.",
+        currentDevices: user.activeDevices.length,
+        maxDevices: user.maxDevices
+      });
+    } else {
+      // Aggiungi il nuovo dispositivo
+      user.activeDevices.push({
+        deviceId,
+        lastLogin: new Date(),
+        deviceInfo: req.headers['user-agent']
+      });
+      await user.save();
+    }
+
     const token = generateToken(user.id);
 
     res.json({
@@ -181,7 +212,11 @@ const loginUser = async (req, res) => {
       isTrial: user.isTrial,
       trialEndsAt: user.trialEndsAt,
       isSubscribed: user.isSubscribed,
-      token
+      token,
+      deviceInfo: {
+        currentDevices: user.activeDevices.length,
+        maxDevices: user.maxDevices
+      }
     });
 
   } catch (error) {

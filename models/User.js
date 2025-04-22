@@ -51,6 +51,17 @@ const userSchema = new mongoose.Schema(
     stripeCustomerId: {
       type: String,
     },
+
+    // 🔐 Campi per gestione dispositivi
+    activeDevices: [{
+      deviceId: String,
+      lastLogin: Date,
+      deviceInfo: String
+    }],
+    maxDevices: {
+      type: Number,
+      default: 2
+    }
   },
   { timestamps: true }
 );

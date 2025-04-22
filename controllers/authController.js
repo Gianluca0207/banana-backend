@@ -21,13 +21,13 @@ const transporter = nodemailer.createTransport({
 
 // 📌 REGISTRA UTENTE
 const registerUser = async (req, res) => {
-  const { name, email, password, phone } = req.body;
+  const { name, email, password, phone, deviceId } = req.body;
 
   console.log("📥 Dati ricevuti:", { ...req.body, password: '***' }); // Nascondi la password nei log
 
   try {
     // Validazione input
-    if (!name || !email || !password || !phone) {
+    if (!name || !email || !password || !phone || !deviceId) {
       return res.status(400).json({ 
         success: false,
         message: "All fields are required",
@@ -35,7 +35,8 @@ const registerUser = async (req, res) => {
           name: !name,
           email: !email,
           password: !password,
-          phone: !phone
+          phone: !phone,
+          deviceId: !deviceId
         }
       });
     }
@@ -88,7 +89,12 @@ const registerUser = async (req, res) => {
       isSubscribed: false,
       subscriptionPlan: null,
       subscriptionStartDate: null,
-      subscriptionEndDate: null
+      subscriptionEndDate: null,
+      activeDevices: [{
+        deviceId,
+        lastLogin: now,
+        deviceInfo: req.headers['user-agent']
+      }]
     });
 
     await user.save();
@@ -100,27 +106,22 @@ const registerUser = async (req, res) => {
       _id: user.id,
       name: user.name,
       email: user.email,
-      phone: user.phone,
       role: user.role,
       isTrial: user.isTrial,
       trialEndsAt: user.trialEndsAt,
       isSubscribed: user.isSubscribed,
-      token
+      token,
+      deviceInfo: {
+        currentDevices: user.activeDevices.length,
+        maxDevices: user.maxDevices
+      }
     });
 
   } catch (error) {
     console.error("❌ Registration error:", error);
-
-    if (error.code === 11000) {
-      return res.status(400).json({ 
-        success: false,
-        message: "Email already registered" 
-      });
-    }
-
     res.status(500).json({ 
       success: false,
-      message: "Server error",
+      message: "An unexpected error occurred. Please try again later.",
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

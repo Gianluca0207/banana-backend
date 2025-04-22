@@ -10,6 +10,7 @@ const summaryExporterSchema = new mongoose.Schema({
   buque: String,
   tipo22XU: Number,
   tipo208: Number,
+  brands: String
 }, { timestamps: true });
 
 module.exports = mongoose.model('SummaryExporter', summaryExporterSchema);

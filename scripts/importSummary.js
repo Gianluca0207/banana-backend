@@ -47,6 +47,7 @@ async function importSummaryData() {
         buque: buque,
         tipo22XU: Number(row['22XU']) || 0,
         tipo208: Number(row['208']) || 0,
+        brands: row.MARCAS?.toString().trim() || '',
       };
     }).filter(item =>
       item.week != null &&

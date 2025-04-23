@@ -12,7 +12,7 @@ const generateToken = (id) => {
 
 // 📧 Setup Email Transporter
 const transporter = nodemailer.createTransport({
-  host: 'mail.bananatracker.ec',
+  host: 'smtp.mailhostbox.com',
   port: 587,
   secure: false,
   auth: {

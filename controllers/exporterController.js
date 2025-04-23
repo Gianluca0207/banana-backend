@@ -18,11 +18,18 @@ const readFromExcel = (boxType) => {
     }
     let jsonData = xlsx.utils.sheet_to_json(worksheet);
     return jsonData.map(item => ({
-        weekNumber: item['Week Number'],
-        week: excelDateToJSDate(item['Week']),
-        price: item['Price'],
-        change: item['Change'],
-        boxType: boxType
+        WeekNumber: item['Week Number'],
+        Price: item['Price'],
+        Change: item['Change']
+    }));
+};
+
+// Funzione per trasformare i dati da MongoDB nel formato del frontend
+const transformMongoData = (data) => {
+    return data.map(item => ({
+        WeekNumber: item.weekNumber,
+        Price: item.price,
+        Change: item.change
     }));
 };
 
@@ -38,10 +45,10 @@ exports.getSheetData = async (req, res) => {
             const data = await ExporterPrice.find({ boxType }).sort({ weekNumber: 1 });
             if (data && data.length > 0) {
                 console.log("✅ Data retrieved from MongoDB");
-                return res.json(data);
+                return res.json(transformMongoData(data));
             }
         } catch (mongoError) {
-            console.log("⚠️ MongoDB read failed, falling back to Excel");
+            console.log("⚠️ MongoDB read failed, falling back to Excel:", mongoError);
         }
 
         // Fallback a Excel
@@ -74,7 +81,7 @@ exports.getWeeks = async (req, res) => {
 
         // Fallback a Excel
         const jsonData = readFromExcel(boxType);
-        const weeks = Array.from(new Set(jsonData.map(item => item.weekNumber)));
+        const weeks = Array.from(new Set(jsonData.map(item => item.WeekNumber)));
         console.log("✅ Weeks Extracted from Excel");
         res.json(weeks);
     } catch (error) {

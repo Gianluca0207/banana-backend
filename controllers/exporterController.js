@@ -1,57 +1,64 @@
-const mongoose = require('mongoose');
-const { connectDB } = require('../config/mongodb');
+const xlsx = require('xlsx');
+const path = require('path');
 
-// Schema per i dati degli exporter
-const exporterSchema = new mongoose.Schema({
-    sheetName: String,
-    data: [{
-        Week: String,
-        'Week Number': String,
-        // Altri campi verranno salvati come sono
-    }]
-}, { strict: false });
+// Funzione per convertire numeri Excel in formato Data
+const excelDateToJSDate = (serial) => {
+    const date = new Date(Math.round((serial - 25569) * 86400 * 1000));
+    return date;
+};
 
-const Exporter = mongoose.model('Exporter', exporterSchema);
-
-exports.getSheetData = async (req, res) => {
+exports.getSheetData = (req, res) => {
     try {
-        await connectDB();
-        
+        const filePath = path.join(__dirname, '../data/exporters.xlsx');
+        const workbook = xlsx.readFile(filePath);
+
         const sheetName = req.query.sheet;
         if (!sheetName) {
             return res.status(400).json({ message: "Specifies the name of the sheet (BoxType)." });
         }
 
-        const exporter = await Exporter.findOne({ sheetName });
-        if (!exporter) {
+        const worksheet = workbook.Sheets[sheetName];
+        if (!worksheet) {
             return res.status(404).json({ message: "Sheet not found." });
         }
 
-        console.log("✅ Data Retrieved from MongoDB and Sent to Frontend:", JSON.stringify(exporter.data, null, 2));
-        res.json(exporter.data);
+        let jsonData = xlsx.utils.sheet_to_json(worksheet);
+
+        jsonData = jsonData.map(item => {
+            if (item['Week'] && typeof item['Week'] === 'number') {
+                const date = excelDateToJSDate(item['Week']);
+                item['Week'] = date.toISOString().split('T')[0];
+            }
+            return item;
+        });
+
+        console.log("✅ Data Converted and Sent to Frontend:", JSON.stringify(jsonData, null, 2));
+        res.json(jsonData);
     } catch (error) {
         console.error('❌ Error retrieving sheet data:', error);
         res.status(500).json({ message: "Error retrieving sheet data." });
     }
 };
 
-exports.getWeeks = async (req, res) => {
+exports.getWeeks = (req, res) => {
     try {
-        await connectDB();
-        
+        const filePath = path.join(__dirname, '../data/exporters.xlsx');
+        const workbook = xlsx.readFile(filePath);
+
         const sheetName = req.query.sheet;
         if (!sheetName) {
             return res.status(400).json({ message: "Specifies the name of the sheet (BoxType)." });
         }
 
-        const exporter = await Exporter.findOne({ sheetName });
-        if (!exporter) {
+        const worksheet = workbook.Sheets[sheetName];
+        if (!worksheet) {
             return res.status(404).json({ message: "Sheet not found." });
         }
 
+        let jsonData = xlsx.utils.sheet_to_json(worksheet);
         const weeks = Array.from(new Set(
-            exporter.data.filter(item => item['Week Number'] !== undefined)
-                        .map(item => item['Week Number'].toString())
+            jsonData.filter(item => item['Week Number'] !== undefined)
+                    .map(item => item['Week Number'].toString())
         ));
 
         console.log("✅ Settimane Estratte:", weeks);

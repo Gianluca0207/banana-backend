@@ -18,6 +18,7 @@ const readFromExcel = (boxType) => {
     }
     let jsonData = xlsx.utils.sheet_to_json(worksheet);
     return jsonData.map(item => ({
+        Week: `Week ${item['Week Number']}`,
         WeekNumber: item['Week Number'],
         Price: item['Price'],
         Change: item['Change']
@@ -27,6 +28,7 @@ const readFromExcel = (boxType) => {
 // Funzione per trasformare i dati da MongoDB nel formato del frontend
 const transformMongoData = (data) => {
     return data.map(item => ({
+        Week: `Week ${item.weekNumber}`,
         WeekNumber: item.weekNumber,
         Price: item.price,
         Change: item.change

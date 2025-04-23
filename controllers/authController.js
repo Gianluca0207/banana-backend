@@ -13,8 +13,8 @@ const generateToken = (id) => {
 // 📧 Setup Email Transporter
 const transporter = nodemailer.createTransport({
   host: 'smtp.mailhostbox.com',
-  port: 465,
-  secure: true,
+  port: 587,
+  secure: false,
   auth: {
     user: 'info@bananatracker.ec',
     pass: process.env.EMAIL_PASSWORD
@@ -22,7 +22,10 @@ const transporter = nodemailer.createTransport({
   tls: {
     rejectUnauthorized: false
   },
-  debug: true // Aggiungiamo il debug per vedere più dettagli
+  debug: true,
+  connectionTimeout: 10000, // 10 secondi
+  greetingTimeout: 10000,
+  socketTimeout: 10000
 });
 
 // 📌 REGISTRA UTENTE
@@ -329,6 +332,8 @@ const updateUserProfile = async (req, res) => {
 const resetPassword = async (req, res) => {
   const { email } = req.body;
   
+  console.log("📧 Tentativo di reset password per:", email);
+  
   if (!email) {
     return res.status(400).json({
       success: false,
@@ -339,9 +344,11 @@ const resetPassword = async (req, res) => {
   try {
     // Normalize email
     const normalizedEmail = email.trim().toLowerCase();
+    console.log("📧 Email normalizzata:", normalizedEmail);
     
     // Find user
     const user = await User.findOne({ email: normalizedEmail });
+    console.log("👤 Utente trovato:", user ? "Sì" : "No");
     
     if (!user) {
       return res.status(404).json({
@@ -351,37 +358,33 @@ const resetPassword = async (req, res) => {
     }
     
     // Generate a strong random password that meets requirements
-    // At least 8 chars with 1 uppercase, 1 lowercase, 1 number, 1 special character
     const upperChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const lowerChars = 'abcdefghijklmnopqrstuvwxyz';
     const numbers = '0123456789';
     const specialChars = '!@#$%^&*()_-+=<>?';
     
-    // Ensure we have at least one of each required character type
     let newPassword = '';
     newPassword += upperChars.charAt(Math.floor(Math.random() * upperChars.length));
     newPassword += lowerChars.charAt(Math.floor(Math.random() * lowerChars.length));
     newPassword += numbers.charAt(Math.floor(Math.random() * numbers.length));
     newPassword += specialChars.charAt(Math.floor(Math.random() * specialChars.length));
     
-    // Add 4 more random characters to reach minimum 8 characters
     const allChars = upperChars + lowerChars + numbers + specialChars;
     for (let i = 0; i < 4; i++) {
       newPassword += allChars.charAt(Math.floor(Math.random() * allChars.length));
     }
     
-    // Shuffle the password characters
     newPassword = newPassword.split('').sort(() => 0.5 - Math.random()).join('');
+    console.log("🔑 Nuova password generata");
     
-    // Hash the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
+    console.log("🔑 Password hashata");
     
-    // Update user's password without triggering middleware
     await User.findByIdAndUpdate(user._id, { password: hashedPassword }, { runValidators: false });
+    console.log("👤 Password aggiornata nel database");
     
-    // Send email with the new password
     const mailOptions = {
-      from: process.env.EMAIL_USER || 'info@bananatracker.ec',
+      from: 'info@bananatracker.ec',
       to: normalizedEmail,
       subject: 'BananaTrack - Your Password Has Been Reset',
       html: `
@@ -396,17 +399,17 @@ const resetPassword = async (req, res) => {
       `
     };
     
+    console.log("📧 Tentativo di invio email...");
     transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
-        console.error('Email sending error:', error);
-        // Still return success even if email fails, as the password was reset
+        console.error('❌ Errore invio email:', error);
         return res.status(200).json({
           success: true,
           message: "Password reset successful, but email could not be sent"
         });
       }
       
-      console.log('Password reset email sent:', info.response);
+      console.log('✅ Email inviata con successo:', info.response);
       res.status(200).json({
         success: true,
         message: "Password reset successful. Check your email for the new password."
@@ -414,7 +417,7 @@ const resetPassword = async (req, res) => {
     });
     
   } catch (error) {
-    console.error("❌ Password reset error:", error);
+    console.error("❌ Errore reset password:", error);
     res.status(500).json({
       success: false,
       message: "Server error",

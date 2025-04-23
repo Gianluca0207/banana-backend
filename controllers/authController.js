@@ -361,19 +361,22 @@ const resetPassword = async (req, res) => {
     const numbers = '0123456789';
     const specialChars = '!@#$%^&*()_-+=<>?';
     
+    // Assicuriamoci di avere almeno un carattere di ogni tipo
     let newPassword = '';
     newPassword += upperChars.charAt(Math.floor(Math.random() * upperChars.length));
     newPassword += lowerChars.charAt(Math.floor(Math.random() * lowerChars.length));
     newPassword += numbers.charAt(Math.floor(Math.random() * numbers.length));
     newPassword += specialChars.charAt(Math.floor(Math.random() * specialChars.length));
     
+    // Aggiungiamo altri caratteri casuali per arrivare a 8
     const allChars = upperChars + lowerChars + numbers + specialChars;
     for (let i = 0; i < 4; i++) {
       newPassword += allChars.charAt(Math.floor(Math.random() * allChars.length));
     }
     
+    // Mescoliamo la password per rendere l'ordine casuale
     newPassword = newPassword.split('').sort(() => 0.5 - Math.random()).join('');
-    console.log("🔑 Nuova password generata");
+    console.log("🔑 Nuova password generata:", newPassword);
     
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     console.log("🔑 Password hashata");

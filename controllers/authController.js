@@ -14,8 +14,8 @@ const generateToken = (id) => {
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER || 'bananatrackapp@gmail.com', // Use from .env or default
-    pass: process.env.EMAIL_PASSWORD || 'your_app_password_here' // Replace with actual app password
+    user: process.env.EMAIL_USER || 'info@bananatracker.ec',
+    pass: process.env.EMAIL_PASSWORD
   }
 });
 
@@ -375,7 +375,7 @@ const resetPassword = async (req, res) => {
     
     // Send email with the new password
     const mailOptions = {
-      from: process.env.EMAIL_USER || 'bananatrackapp@gmail.com',
+      from: process.env.EMAIL_USER || 'info@bananatracker.ec',
       to: normalizedEmail,
       subject: 'BananaTrack - Your Password Has Been Reset',
       html: `

@@ -129,9 +129,6 @@ app.use("/api/protected", require(path.join(__dirname, "./routes/protectedRoutes
 // 📂 Cartella per file statici (es. immagini caricate)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); 
 
-// Rotta per la dashboard
-app.use('/api/dashboard', require(path.join(__dirname, 'routes/dashboardRoutes')));
-
 // Global error handling middleware
 app.use((err, req, res, next) => {
   console.error('❌ Global error:', err);

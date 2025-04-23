@@ -12,10 +12,15 @@ const generateToken = (id) => {
 
 // 📧 Setup Email Transporter
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'mail.bananatracker.ec',
+  port: 587,
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER || 'info@bananatracker.ec',
     pass: process.env.EMAIL_PASSWORD
+  },
+  tls: {
+    rejectUnauthorized: false
   }
 });
 

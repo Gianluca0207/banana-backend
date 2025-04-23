@@ -13,20 +13,29 @@ const generateToken = (id) => {
 // 📧 Setup Email Transporter
 const transporter = nodemailer.createTransport({
   host: 'smtp.mailhostbox.com',
-  port: 587,
-  secure: false,
+  port: 465,
+  secure: true,
   auth: {
     user: 'info@bananatracker.ec',
     pass: process.env.EMAIL_PASSWORD
   },
   tls: {
-    rejectUnauthorized: false
+    rejectUnauthorized: false,
+    minVersion: 'TLSv1.2'
   },
+  authMethod: 'PLAIN',
   debug: true,
-  connectionTimeout: 10000, // 10 secondi
+  connectionTimeout: 10000,
   greetingTimeout: 10000,
   socketTimeout: 10000
 });
+
+// Aggiungiamo un controllo della password
+if (!process.env.EMAIL_PASSWORD) {
+  console.error('❌ EMAIL_PASSWORD non configurata!');
+} else {
+  console.log('✅ EMAIL_PASSWORD configurata');
+}
 
 // 📌 REGISTRA UTENTE
 const registerUser = async (req, res) => {

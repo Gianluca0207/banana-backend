@@ -17,22 +17,31 @@ const readFromExcel = (boxType) => {
         throw new Error("Sheet not found.");
     }
     let jsonData = xlsx.utils.sheet_to_json(worksheet);
-    return jsonData.map(item => ({
-        Week: `Week ${item['Week Number']}`,
-        WeekNumber: item['Week Number'],
-        Price: item['Price'],
-        Change: item['Change']
-    }));
+    return jsonData.map(item => {
+        const weekNumber = item['Week Number'];
+        return {
+            Week: `Week ${weekNumber}`,
+            WeekNumber: weekNumber,
+            Price: item['Price'],
+            Change: item['Change']
+        };
+    });
 };
 
 // Funzione per trasformare i dati da MongoDB nel formato del frontend
 const transformMongoData = (data) => {
-    return data.map(item => ({
-        Week: `Week ${item.weekNumber}`,
-        WeekNumber: item.weekNumber,
-        Price: item.price,
-        Change: item.change
-    }));
+    return data.map(item => {
+        // Converti la data in formato settimana
+        const weekDate = new Date(item.week);
+        const weekNumber = item.weekNumber;
+        
+        return {
+            Week: `Week ${weekNumber}`,
+            WeekNumber: weekNumber,
+            Price: item.price,
+            Change: item.change
+        };
+    });
 };
 
 exports.getSheetData = async (req, res) => {
@@ -46,8 +55,10 @@ exports.getSheetData = async (req, res) => {
         try {
             const data = await ExporterPrice.find({ boxType }).sort({ weekNumber: 1 });
             if (data && data.length > 0) {
-                console.log("✅ Data retrieved from MongoDB");
-                return res.json(transformMongoData(data));
+                console.log("✅ Data retrieved from MongoDB:", data);
+                const transformedData = transformMongoData(data);
+                console.log("✅ Transformed data:", transformedData);
+                return res.json(transformedData);
             }
         } catch (mongoError) {
             console.log("⚠️ MongoDB read failed, falling back to Excel:", mongoError);
@@ -55,7 +66,7 @@ exports.getSheetData = async (req, res) => {
 
         // Fallback a Excel
         const jsonData = readFromExcel(boxType);
-        console.log("✅ Data Converted and Sent to Frontend from Excel");
+        console.log("✅ Data Converted and Sent to Frontend from Excel:", jsonData);
         res.json(jsonData);
     } catch (error) {
         console.error('❌ Error retrieving sheet data:', error);

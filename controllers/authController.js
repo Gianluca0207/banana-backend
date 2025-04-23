@@ -13,15 +13,16 @@ const generateToken = (id) => {
 // 📧 Setup Email Transporter
 const transporter = nodemailer.createTransport({
   host: 'smtp.mailhostbox.com',
-  port: 587,
-  secure: false,
+  port: 465,
+  secure: true,
   auth: {
-    user: process.env.EMAIL_USER || 'info@bananatracker.ec',
+    user: 'info@bananatracker.ec',
     pass: process.env.EMAIL_PASSWORD
   },
   tls: {
     rejectUnauthorized: false
-  }
+  },
+  debug: true // Aggiungiamo il debug per vedere più dettagli
 });
 
 // 📌 REGISTRA UTENTE

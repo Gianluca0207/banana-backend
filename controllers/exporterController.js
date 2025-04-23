@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-require('dotenv').config();
+const { connectDB } = require('../config/mongodb');
 
 // Schema per i dati degli exporter
 const exporterSchema = new mongoose.Schema({
@@ -13,13 +13,10 @@ const exporterSchema = new mongoose.Schema({
 
 const Exporter = mongoose.model('Exporter', exporterSchema);
 
-// Connessione a MongoDB con le credenziali fornite
-mongoose.connect('mongodb+srv://bananatracker:Gp02072001@cluster0.qvz8ays.mongodb.net/bananadatabase?retryWrites=true&w=majority&appName=Cluster0')
-    .then(() => console.log('✅ Connected to MongoDB'))
-    .catch(err => console.error('❌ MongoDB connection error:', err));
-
 exports.getSheetData = async (req, res) => {
     try {
+        await connectDB();
+        
         const sheetName = req.query.sheet;
         if (!sheetName) {
             return res.status(400).json({ message: "Specifies the name of the sheet (BoxType)." });
@@ -40,6 +37,8 @@ exports.getSheetData = async (req, res) => {
 
 exports.getWeeks = async (req, res) => {
     try {
+        await connectDB();
+        
         const sheetName = req.query.sheet;
         if (!sheetName) {
             return res.status(400).json({ message: "Specifies the name of the sheet (BoxType)." });

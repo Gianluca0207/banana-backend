@@ -1,7 +1,7 @@
 const xlsx = require('xlsx');
 const path = require('path');
 const mongoose = require('mongoose');
-require('dotenv').config();
+const { connectDB } = require('../config/mongodb');
 
 // Schema per i dati degli exporter
 const exporterSchema = new mongoose.Schema({
@@ -23,8 +23,8 @@ const excelDateToJSDate = (serial) => {
 
 async function importExcelToMongo() {
     try {
-        // Connessione a MongoDB con le credenziali fornite
-        await mongoose.connect('mongodb+srv://bananatracker:Gp02072001@cluster0.qvz8ays.mongodb.net/bananadatabase?retryWrites=true&w=majority&appName=Cluster0');
+        // Usa la connessione condivisa
+        await connectDB();
         console.log('✅ Connected to MongoDB');
 
         const filePath = path.join(__dirname, '../data/exporters.xlsx');

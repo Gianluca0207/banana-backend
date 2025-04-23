@@ -1,5 +1,6 @@
 const xlsx = require('xlsx');
 const path = require('path');
+const Exporter = require('../models/Exporter');
 
 // Funzione per convertire numeri Excel in formato Data
 const excelDateToJSDate = (serial) => {
@@ -7,32 +8,45 @@ const excelDateToJSDate = (serial) => {
     return date;
 };
 
-exports.getSheetData = (req, res) => {
-    try {
-        const filePath = path.join(__dirname, '../data/exporters.xlsx');
-        const workbook = xlsx.readFile(filePath);
+// Funzione per leggere dati da Excel (fallback)
+const readFromExcel = (sheetName) => {
+    const filePath = path.join(__dirname, '../data/exporters.xlsx');
+    const workbook = xlsx.readFile(filePath);
+    const worksheet = workbook.Sheets[sheetName];
+    if (!worksheet) {
+        throw new Error("Sheet not found.");
+    }
+    let jsonData = xlsx.utils.sheet_to_json(worksheet);
+    return jsonData.map(item => {
+        if (item['Week'] && typeof item['Week'] === 'number') {
+            const date = excelDateToJSDate(item['Week']);
+            item['Week'] = date.toISOString().split('T')[0];
+        }
+        return item;
+    });
+};
 
+exports.getSheetData = async (req, res) => {
+    try {
         const sheetName = req.query.sheet;
         if (!sheetName) {
             return res.status(400).json({ message: "Specifies the name of the sheet (BoxType)." });
         }
 
-        const worksheet = workbook.Sheets[sheetName];
-        if (!worksheet) {
-            return res.status(404).json({ message: "Sheet not found." });
+        // Prova a leggere da MongoDB
+        try {
+            const data = await Exporter.find({});
+            if (data && data.length > 0) {
+                console.log("✅ Data retrieved from MongoDB");
+                return res.json(data);
+            }
+        } catch (mongoError) {
+            console.log("⚠️ MongoDB read failed, falling back to Excel");
         }
 
-        let jsonData = xlsx.utils.sheet_to_json(worksheet);
-
-        jsonData = jsonData.map(item => {
-            if (item['Week'] && typeof item['Week'] === 'number') {
-                const date = excelDateToJSDate(item['Week']);
-                item['Week'] = date.toISOString().split('T')[0];
-            }
-            return item;
-        });
-
-        console.log("✅ Data Converted and Sent to Frontend:", JSON.stringify(jsonData, null, 2));
+        // Fallback a Excel
+        const jsonData = readFromExcel(sheetName);
+        console.log("✅ Data Converted and Sent to Frontend from Excel");
         res.json(jsonData);
     } catch (error) {
         console.error('❌ Error retrieving sheet data:', error);
@@ -40,31 +54,35 @@ exports.getSheetData = (req, res) => {
     }
 };
 
-exports.getWeeks = (req, res) => {
+exports.getWeeks = async (req, res) => {
     try {
-        const filePath = path.join(__dirname, '../data/exporters.xlsx');
-        const workbook = xlsx.readFile(filePath);
-
         const sheetName = req.query.sheet;
         if (!sheetName) {
             return res.status(400).json({ message: "Specifies the name of the sheet (BoxType)." });
         }
 
-        const worksheet = workbook.Sheets[sheetName];
-        if (!worksheet) {
-            return res.status(404).json({ message: "Sheet not found." });
+        // Prova a leggere da MongoDB
+        try {
+            const data = await Exporter.find({});
+            if (data && data.length > 0) {
+                const weeks = Array.from(new Set(data.map(item => item.week)));
+                console.log("✅ Weeks retrieved from MongoDB");
+                return res.json(weeks);
+            }
+        } catch (mongoError) {
+            console.log("⚠️ MongoDB read failed, falling back to Excel");
         }
 
-        let jsonData = xlsx.utils.sheet_to_json(worksheet);
+        // Fallback a Excel
+        const jsonData = readFromExcel(sheetName);
         const weeks = Array.from(new Set(
             jsonData.filter(item => item['Week Number'] !== undefined)
                     .map(item => item['Week Number'].toString())
         ));
-
-        console.log("✅ Settimane Estratte:", weeks);
+        console.log("✅ Weeks Extracted from Excel");
         res.json(weeks);
     } catch (error) {
-        console.error('❌ Errore nel recupero delle settimane:', error);
-        res.status(500).json({ message: "Errore nel recupero delle settimane." });
+        console.error('❌ Error retrieving weeks:', error);
+        res.status(500).json({ message: "Error retrieving weeks." });
     }
 };

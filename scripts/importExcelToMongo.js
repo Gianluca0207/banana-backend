@@ -23,8 +23,8 @@ const excelDateToJSDate = (serial) => {
 
 async function importExcelToMongo() {
     try {
-        // Connessione a MongoDB
-        await mongoose.connect(process.env.MONGODB_URI);
+        // Connessione a MongoDB con le credenziali fornite
+        await mongoose.connect('mongodb+srv://bananatracker:Gp02072001@cluster0.qvz8ays.mongodb.net/bananadatabase?retryWrites=true&w=majority&appName=Cluster0');
         console.log('✅ Connected to MongoDB');
 
         const filePath = path.join(__dirname, '../data/exporters.xlsx');

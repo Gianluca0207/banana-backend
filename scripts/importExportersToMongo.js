@@ -5,8 +5,20 @@ const ExporterPrice = require('../models/ExporterPrice');
 
 // Funzione per convertire numeri Excel in formato Data
 const excelDateToJSDate = (serial) => {
-    const date = new Date(Math.round((serial - 25569) * 86400 * 1000));
-    return date;
+    try {
+        if (typeof serial === 'number') {
+            const date = new Date(Math.round((serial - 25569) * 86400 * 1000));
+            if (isNaN(date.getTime())) {
+                console.warn(`⚠️ Data non valida: ${serial}`);
+                return null;
+            }
+            return date;
+        }
+        return null;
+    } catch (error) {
+        console.warn(`⚠️ Errore nella conversione della data: ${serial}`, error);
+        return null;
+    }
 };
 
 async function connectToMongo() {
@@ -40,13 +52,21 @@ async function importExportersData() {
 
             console.log(`📊 Righe lette da Excel (${boxType}):`, data.length);
 
-            const formatted = data.map(row => ({
-                weekNumber: row['Week Number'],
-                week: excelDateToJSDate(row['Week']),
-                price: row['Price'],
-                change: row['Change'],
-                boxType: boxType
-            })).filter(item =>
+            const formatted = data.map(row => {
+                const weekDate = excelDateToJSDate(row['Week']);
+                if (!weekDate) {
+                    console.warn(`⚠️ Riga saltata - Data non valida:`, row);
+                    return null;
+                }
+                return {
+                    weekNumber: row['Week Number'],
+                    week: weekDate,
+                    price: row['Price'],
+                    change: row['Change'],
+                    boxType: boxType
+                };
+            }).filter(item => 
+                item != null &&
                 item.weekNumber != null &&
                 item.price != null &&
                 item.change != null
@@ -56,6 +76,9 @@ async function importExportersData() {
                 console.warn(`⚠️ Nessun dato valido trovato per ${boxType}`);
                 continue;
             }
+
+            console.log(`📝 Dati formattati per ${boxType}:`, formatted.length);
+            console.log('Esempio di dati:', formatted[0]);
 
             // Elimina i dati esistenti per questo tipo di scatola
             await ExporterPrice.deleteMany({ boxType });
@@ -67,7 +90,7 @@ async function importExportersData() {
         }
     } catch (error) {
         console.error('❌ Errore durante l\'importazione prezzi exporters:', error);
-        throw error; // Propaga l'errore al chiamante
+        throw error;
     } finally {
         if (mongoConnected) {
             try {

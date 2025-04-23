@@ -1,6 +1,6 @@
 const xlsx = require('xlsx');
 const path = require('path');
-const Exporter = require('../models/Exporter');
+const ExporterPrice = require('../models/ExporterPrice');
 
 // Funzione per convertire numeri Excel in formato Data
 const excelDateToJSDate = (serial) => {
@@ -9,33 +9,33 @@ const excelDateToJSDate = (serial) => {
 };
 
 // Funzione per leggere dati da Excel (fallback)
-const readFromExcel = (sheetName) => {
+const readFromExcel = (boxType) => {
     const filePath = path.join(__dirname, '../data/exporters.xlsx');
     const workbook = xlsx.readFile(filePath);
-    const worksheet = workbook.Sheets[sheetName];
+    const worksheet = workbook.Sheets[boxType];
     if (!worksheet) {
         throw new Error("Sheet not found.");
     }
     let jsonData = xlsx.utils.sheet_to_json(worksheet);
-    return jsonData.map(item => {
-        if (item['Week'] && typeof item['Week'] === 'number') {
-            const date = excelDateToJSDate(item['Week']);
-            item['Week'] = date.toISOString().split('T')[0];
-        }
-        return item;
-    });
+    return jsonData.map(item => ({
+        weekNumber: item['Week Number'],
+        week: excelDateToJSDate(item['Week']),
+        price: item['Price'],
+        change: item['Change'],
+        boxType: boxType
+    }));
 };
 
 exports.getSheetData = async (req, res) => {
     try {
-        const sheetName = req.query.sheet;
-        if (!sheetName) {
-            return res.status(400).json({ message: "Specifies the name of the sheet (BoxType)." });
+        const boxType = req.query.sheet;
+        if (!boxType) {
+            return res.status(400).json({ message: "Specifies the box type (43LB 22XU, 44LB 22XU, 50LB 22XU, 31.5LB Box208)." });
         }
 
         // Prova a leggere da MongoDB
         try {
-            const data = await Exporter.find({});
+            const data = await ExporterPrice.find({ boxType }).sort({ weekNumber: 1 });
             if (data && data.length > 0) {
                 console.log("✅ Data retrieved from MongoDB");
                 return res.json(data);
@@ -45,7 +45,7 @@ exports.getSheetData = async (req, res) => {
         }
 
         // Fallback a Excel
-        const jsonData = readFromExcel(sheetName);
+        const jsonData = readFromExcel(boxType);
         console.log("✅ Data Converted and Sent to Frontend from Excel");
         res.json(jsonData);
     } catch (error) {
@@ -56,29 +56,25 @@ exports.getSheetData = async (req, res) => {
 
 exports.getWeeks = async (req, res) => {
     try {
-        const sheetName = req.query.sheet;
-        if (!sheetName) {
-            return res.status(400).json({ message: "Specifies the name of the sheet (BoxType)." });
+        const boxType = req.query.sheet;
+        if (!boxType) {
+            return res.status(400).json({ message: "Specifies the box type (43LB 22XU, 44LB 22XU, 50LB 22XU, 31.5LB Box208)." });
         }
 
         // Prova a leggere da MongoDB
         try {
-            const data = await Exporter.find({});
+            const data = await ExporterPrice.find({ boxType }).distinct('weekNumber');
             if (data && data.length > 0) {
-                const weeks = Array.from(new Set(data.map(item => item.week)));
                 console.log("✅ Weeks retrieved from MongoDB");
-                return res.json(weeks);
+                return res.json(data);
             }
         } catch (mongoError) {
             console.log("⚠️ MongoDB read failed, falling back to Excel");
         }
 
         // Fallback a Excel
-        const jsonData = readFromExcel(sheetName);
-        const weeks = Array.from(new Set(
-            jsonData.filter(item => item['Week Number'] !== undefined)
-                    .map(item => item['Week Number'].toString())
-        ));
+        const jsonData = readFromExcel(boxType);
+        const weeks = Array.from(new Set(jsonData.map(item => item.weekNumber)));
         console.log("✅ Weeks Extracted from Excel");
         res.json(weeks);
     } catch (error) {

@@ -13,8 +13,8 @@ const exporterSchema = new mongoose.Schema({
 
 const Exporter = mongoose.model('Exporter', exporterSchema);
 
-// Connessione a MongoDB
-mongoose.connect(process.env.MONGODB_URI)
+// Connessione a MongoDB con le credenziali fornite
+mongoose.connect('mongodb+srv://bananatracker:Gp02072001@cluster0.qvz8ays.mongodb.net/bananadatabase?retryWrites=true&w=majority&appName=Cluster0')
     .then(() => console.log('✅ Connected to MongoDB'))
     .catch(err => console.error('❌ MongoDB connection error:', err));
 

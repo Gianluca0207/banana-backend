@@ -74,8 +74,8 @@ router.post('/create-checkout-session', async (req, res) => {
     }
     
     // URL di successo e cancellazione
-    const successUrl = `bananatrackapp://payment/success?userId=${userId}&plan=${plan}`;
-    const cancelUrl = `bananatrackapp://payment/cancel`;
+    const successUrl = `https://banana-backend-3.onrender.com/api/payments/process-success?userId=${userId}&plan=${plan}`;
+    const cancelUrl = `https://banana-backend-3.onrender.com/api/payments/process-cancel`;
     
     // Crea una sessione di checkout
     const session = await stripe.checkout.sessions.create({

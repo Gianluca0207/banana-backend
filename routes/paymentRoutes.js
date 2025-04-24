@@ -334,12 +334,17 @@ router.get('/process-success', async (req, res) => {
     
     console.log(`✅ Subscription processed for user: ${userId}, plan: ${plan}`);
     
-    // Redirect to the success page
-    res.redirect(`/payment-success.html`);
+    // Redirect to the app
+    res.redirect(`bananatrackapp://payment/success?userId=${userId}&plan=${plan}`);
   } catch (error) {
     console.error('❌ Error processing successful payment:', error);
-    res.status(500).send('Error processing payment. Please contact support.');
+    res.redirect(`bananatrackapp://payment/error?message=${encodeURIComponent(error.message)}`);
   }
+});
+
+// Handle cancel redirect
+router.get('/process-cancel', (req, res) => {
+  res.redirect('bananatrackapp://payment/cancel');
 });
 
 module.exports = router;

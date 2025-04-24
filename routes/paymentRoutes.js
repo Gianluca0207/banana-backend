@@ -279,7 +279,7 @@ router.get('/process-success', async (req, res) => {
     
     if (!userId || !plan) {
       console.error('❌ Missing userId or plan in success redirect');
-      return res.status(400).send('Missing required parameters');
+      return res.redirect(`bananatrackapp://payment/error?message=${encodeURIComponent('Missing required parameters')}`);
     }
     
     // Calculate subscription dates

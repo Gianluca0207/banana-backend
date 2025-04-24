@@ -282,6 +282,22 @@ router.get('/process-success', async (req, res) => {
       return res.redirect(`bananatrackapp://payment/error?message=${encodeURIComponent('Missing required parameters')}`);
     }
     
+    // Define plans with amounts
+    const plans = {
+      monthly: {
+        amount: 20000, // $200.00
+        name: 'Monthly Subscription to BananaTracker'
+      },
+      semiannual: {
+        amount: 80000, // $800.00
+        name: 'Semiannual Subscription to BananaTracker'
+      },
+      annual: {
+        amount: 120000, // $1200.00
+        name: 'Annual Subscription to BananaTracker'
+      }
+    };
+    
     // Calculate subscription dates
     const startDate = new Date();
     let endDate = new Date(startDate);

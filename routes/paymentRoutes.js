@@ -171,7 +171,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
           existingSubscription._id,
           {
             plan,
-            amount: session.amount_total,
+            amount: plans[plan].amount,
             status: 'active',
             chargeId: session.payment_intent,
             startDate,
@@ -185,7 +185,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         await Subscription.create({
           user: userId,
           plan,
-          amount: session.amount_total,
+          amount: plans[plan].amount,
           status: 'active',
           chargeId: session.payment_intent,
           startDate,
@@ -303,6 +303,7 @@ router.get('/process-success', async (req, res) => {
         existingSubscription._id,
         {
           plan,
+          amount: plans[plan].amount,
           status: 'active',
           startDate,
           endDate,
@@ -315,6 +316,7 @@ router.get('/process-success', async (req, res) => {
       await Subscription.create({
         user: userId,
         plan,
+        amount: plans[plan].amount,
         status: 'active',
         startDate,
         endDate,

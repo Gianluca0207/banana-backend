@@ -60,21 +60,12 @@ router.get('/', async (req, res) => {
 // Route per ottenere i filtri disponibili
 router.get('/filters', async (req, res) => {
   try {
-    const { week, country, destino, exporter } = req.query;
-    const query = {};
-
-    // Applica i filtri esistenti
-    if (week) query.week = Number(week);
-    if (country && country !== 'All') query.country = country;
-    if (destino && destino !== 'All') query.destino = destino;
-    if (exporter && exporter !== 'All') query.exporter = exporter;
-
     // Ottieni i valori unici per ogni campo con gestione degli errori
     const [weeks, countries, ports, exporters] = await Promise.all([
-      SummaryExporter.distinct('week', query).catch(() => []),
-      SummaryExporter.distinct('country', query).catch(() => []),
-      SummaryExporter.distinct('destino', query).catch(() => []),
-      SummaryExporter.distinct('exporter', query).catch(() => [])
+      SummaryExporter.distinct('week').catch(() => []),
+      SummaryExporter.distinct('country').catch(() => []),
+      SummaryExporter.distinct('destino').catch(() => []),
+      SummaryExporter.distinct('exporter').catch(() => [])
     ]);
 
     // Filtra valori null/undefined e ordina

@@ -9,7 +9,4 @@ router.get('/weeks', exporterController.getWeeks);
 // Rotta per recuperare i dati del foglio Excel
 router.get('/sheet-data', exporterController.getSheetData);
 
-// Rotta per pulire la cache
-router.post('/clear-cache', exporterController.clearCache);
-
 module.exports = router;

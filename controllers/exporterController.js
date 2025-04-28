@@ -1,7 +1,7 @@
 const xlsx = require('xlsx');
 const path = require('path');
 const fs = require('fs');
-const LRU = require('lru-cache');
+const { LRUCache } = require('lru-cache');
 
 // Cache per i dati degli exporters
 const exportersCache = new Map();
@@ -9,7 +9,7 @@ let lastCacheUpdate = null;
 let workbookCache = null;
 
 // Cache per i dati dei fogli
-const sheetDataCache = new LRU({
+const sheetDataCache = new LRUCache({
   max: 100,        // Massimo 100 items in cache
   maxAge: 3600000  // 1 ora di validità
 });

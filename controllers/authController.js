@@ -488,6 +488,44 @@ const changePassword = async (req, res) => {
   }
 };
 
+// 🗑️ CANCELLA ACCOUNT
+const deleteAccount = async (req, res) => {
+  try {
+    const userId = req.user._id; // Ottieni l'ID dell'utente dal token JWT
+
+    // Trova e cancella l'utente
+    const user = await User.findByIdAndDelete(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    // Invia email di conferma cancellazione
+    const mailOptions = {
+      from: 'bananatrackerecuador@gmail.com',
+      to: user.email,
+      subject: 'Account Cancellation Confirmation',
+      text: `Dear ${user.name},\n\nYour account has been successfully deleted from BananaTracker. We're sorry to see you go.\n\nIf you have any feedback about your experience, we'd love to hear from you.\n\nBest regards,\nBananaTracker Team`
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({
+      success: true,
+      message: 'Account deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error deleting account'
+    });
+  }
+};
+
 // 📤 ESPORTA TUTTO
 module.exports = {
   registerUser,
@@ -497,4 +535,5 @@ module.exports = {
   updateUserProfile,
   resetPassword,
   changePassword,
+  deleteAccount
 };

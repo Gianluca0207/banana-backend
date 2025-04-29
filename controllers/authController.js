@@ -491,7 +491,7 @@ const changePassword = async (req, res) => {
 // 🗑️ CANCELLA ACCOUNT
 const deleteAccount = async (req, res) => {
   try {
-    const userId = req.user._id; // Ottieni l'ID dell'utente dal token JWT
+    const userId = req.user.id; // Cambiato da _id a id
 
     // Trova e cancella l'utente
     const user = await User.findByIdAndDelete(userId);

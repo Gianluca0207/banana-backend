@@ -492,9 +492,18 @@ const changePassword = async (req, res) => {
 const deleteAccount = async (req, res) => {
   try {
     console.log('🔄 Tentativo di cancellazione account');
-    console.log('User ID:', req.user.id);
+    console.log('User object:', req.user);
     
-    const userId = req.user.id;
+    if (!req.user || !req.user._id) {
+      console.log('❌ Utente non valido nella richiesta');
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid user data'
+      });
+    }
+
+    const userId = req.user._id;
+    console.log('User ID:', userId);
 
     // Trova e cancella l'utente
     console.log('🔍 Cerco utente nel database...');

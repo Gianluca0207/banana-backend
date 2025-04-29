@@ -491,19 +491,27 @@ const changePassword = async (req, res) => {
 // 🗑️ CANCELLA ACCOUNT
 const deleteAccount = async (req, res) => {
   try {
-    const userId = req.user.id; // Cambiato da _id a id
+    console.log('🔄 Tentativo di cancellazione account');
+    console.log('User ID:', req.user.id);
+    
+    const userId = req.user.id;
 
     // Trova e cancella l'utente
+    console.log('🔍 Cerco utente nel database...');
     const user = await User.findByIdAndDelete(userId);
     
     if (!user) {
+      console.log('❌ Utente non trovato');
       return res.status(404).json({
         success: false,
         error: 'User not found'
       });
     }
 
+    console.log('✅ Utente trovato e cancellato');
+
     // Invia email di conferma cancellazione
+    console.log('📧 Invio email di conferma...');
     const mailOptions = {
       from: 'bananatrackerecuador@gmail.com',
       to: user.email,
@@ -512,13 +520,14 @@ const deleteAccount = async (req, res) => {
     };
 
     await transporter.sendMail(mailOptions);
+    console.log('✅ Email inviata con successo');
 
     res.status(200).json({
       success: true,
       message: 'Account deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting account:', error);
+    console.error('❌ Errore durante la cancellazione:', error);
     res.status(500).json({
       success: false,
       error: 'Error deleting account'

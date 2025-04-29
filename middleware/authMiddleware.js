@@ -5,12 +5,17 @@ const User = require("../models/User");
 const protect = async (req, res, next) => {
     let token;
 
+    console.log(`🔍 Richiesta ${req.method} a ${req.path}`);
+    console.log('Headers:', req.headers);
+
     if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
         try {
             token = req.headers.authorization.split(" ")[1];  // 📌 Estrai il token
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            console.log('Token decodificato:', decoded);
 
             req.user = await User.findById(decoded.id).select("-password");
+            console.log('Utente trovato:', req.user ? 'Sì' : 'No');
 
             if (!req.user) {
                 return res.status(401).json({ message: "User not found" });
@@ -18,9 +23,11 @@ const protect = async (req, res, next) => {
 
             next();  // 🔓 Continua alla prossima funzione middleware
         } catch (error) {
+            console.error('Errore autenticazione:', error);
             return res.status(401).json({ message: "Invalid token" });
         }
     } else {
+        console.log('Token mancante nei headers');
         return res.status(401).json({ message: "Access denied, token missing" });
     }
 };

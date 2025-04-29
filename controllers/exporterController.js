@@ -1,11 +1,21 @@
 const xlsx = require('xlsx');
 const path = require('path');
 const fs = require('fs');
+const { LRUCache } = require('lru-cache');
 
 // Cache per i dati degli exporters
 const exportersCache = new Map();
 let lastCacheUpdate = null;
 let workbookCache = null;
+
+// Cache per i dati dei fogli
+const sheetDataCache = new LRUCache({
+  max: 100,        // Massimo 100 items in cache
+  maxAge: 3600000  // 1 ora di validità
+});
+
+// Cache per il workbook
+let lastWorkbookUpdate = null;
 
 // Funzione per convertire numeri Excel in formato Data
 const excelDateToJSDate = (serial) => {
@@ -32,6 +42,25 @@ const updateCache = () => {
     }
 };
 
+// Funzione per aggiornare la cache del workbook
+const updateWorkbookCache = () => {
+  const now = new Date();
+  const oneHourAgo = new Date(now.getTime() - 3600000);
+
+  if (workbookCache && lastWorkbookUpdate && lastWorkbookUpdate > oneHourAgo) {
+    return;
+  }
+
+  try {
+    const filePath = path.join(__dirname, '../data/ESTADISTICAS_COM_2025.xlsx');
+    workbookCache = xlsx.readFile(filePath);
+    lastWorkbookUpdate = new Date();
+    console.log('📦 Workbook cache aggiornata');
+  } catch (error) {
+    console.error('❌ Errore nell\'aggiornamento della cache del workbook:', error);
+  }
+};
+
 exports.getSheetData = (req, res) => {
     try {
         updateCache();
@@ -42,9 +71,11 @@ exports.getSheetData = (req, res) => {
         }
 
         // Verifica se i dati sono già in cache
-        if (exportersCache.has(sheetName)) {
+        const cacheKey = `sheet-data-${sheetName}`;
+        const cachedData = sheetDataCache.get(cacheKey);
+        if (cachedData) {
             console.log(`📦 Dati del foglio ${sheetName} serviti dalla cache`);
-            return res.json(exportersCache.get(sheetName));
+            return res.json(cachedData);
         }
 
         const worksheet = workbookCache.Sheets[sheetName];
@@ -63,7 +94,7 @@ exports.getSheetData = (req, res) => {
         });
 
         // Salva i dati in cache
-        exportersCache.set(sheetName, jsonData);
+        sheetDataCache.set(cacheKey, jsonData);
         
         console.log(`✅ Dati convertiti e inviati al frontend per il foglio ${sheetName}:`, jsonData.length, 'righe');
         res.json(jsonData);
@@ -75,7 +106,7 @@ exports.getSheetData = (req, res) => {
 
 exports.getWeeks = (req, res) => {
     try {
-        updateCache();
+        updateWorkbookCache();
 
         const sheetName = req.query.sheet;
         if (!sheetName) {
@@ -109,4 +140,13 @@ exports.getWeeks = (req, res) => {
         console.error('❌ Errore nel recupero delle settimane:', error);
         res.status(500).json({ message: "Errore nel recupero delle settimane." });
     }
+};
+
+// Aggiungiamo una route per pulire la cache se necessario
+exports.clearCache = (req, res) => {
+  sheetDataCache.reset();
+  workbookCache = null;
+  lastWorkbookUpdate = null;
+  console.log('🧹 Cache pulita');
+  res.json({ message: 'Cache cleared successfully' });
 };

@@ -279,7 +279,7 @@ router.get('/process-success', async (req, res) => {
     
     if (!userId || !plan) {
       console.error('❌ Missing userId or plan in success redirect');
-      return res.redirect(`bananatrackapp://payment/error?message=${encodeURIComponent('Missing required parameters')}`);
+      return res.redirect(`bananatrack://payment/error?message=${encodeURIComponent('Missing required parameters')}`);
     }
     
     // Define plans with amounts
@@ -353,16 +353,16 @@ router.get('/process-success', async (req, res) => {
     console.log(`✅ Subscription processed for user: ${userId}, plan: ${plan}`);
     
     // Redirect to the app
-    res.redirect(`bananatrackapp://payment/success?userId=${userId}&plan=${plan}`);
+    res.redirect(`bananatrack://payment/success?userId=${userId}&plan=${plan}`);
   } catch (error) {
     console.error('❌ Error processing successful payment:', error);
-    res.redirect(`bananatrackapp://payment/error?message=${encodeURIComponent(error.message)}`);
+    res.redirect(`bananatrack://payment/error?message=${encodeURIComponent(error.message)}`);
   }
 });
 
 // Handle cancel redirect
 router.get('/process-cancel', (req, res) => {
-  res.redirect('bananatrackapp://payment/cancel');
+  res.redirect('bananatrack://payment/cancel');
 });
 
 module.exports = router;

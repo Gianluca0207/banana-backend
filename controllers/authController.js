@@ -28,7 +28,7 @@ console.log('✅ EMAIL_PASSWORD configurata');
 
 // 📌 REGISTRA UTENTE
 const registerUser = async (req, res) => {
-  const { name, email, password, phone, deviceId } = req.body;
+  const { name, email, password, phone, deviceId, deviceType = 'web' } = req.body;
 
   console.log("📥 Dati ricevuti:", { ...req.body, password: '***' });
 
@@ -107,7 +107,8 @@ const registerUser = async (req, res) => {
       activeDevices: [{
         deviceId,
         lastLogin: now,
-        deviceInfo: req.headers['user-agent']
+        deviceInfo: req.headers['user-agent'],
+        deviceType
       }]
     });
 
@@ -150,7 +151,7 @@ const registerUser = async (req, res) => {
 
 // 📌 LOGIN UTENTE
 const loginUser = async (req, res) => {
-  const { email, password, deviceId } = req.body;
+  const { email, password, deviceId, deviceType = 'web' } = req.body;
 
   try {
     if (!email || !password) {
@@ -205,20 +206,25 @@ const loginUser = async (req, res) => {
     if (existingDevice) {
       existingDevice.lastLogin = new Date();
       await user.save();
-    } else if (user.activeDevices.length >= user.maxDevices) {
-      return res.status(403).json({ 
-        success: false,
-        errorType: "device_limit_exceeded",
-        message: "You're trying to access from a third device. Maximum 2 devices allowed per account. Please remove a device from your account settings or contact support.",
-        currentDevices: user.activeDevices.length,
-        maxDevices: user.maxDevices
-      });
     } else {
+      // Controlla solo i dispositivi mobile per il limite
+      const mobileDevices = user.activeDevices.filter(d => d.deviceType === 'mobile');
+      if (deviceType === 'mobile' && mobileDevices.length >= user.maxDevices) {
+        return res.status(403).json({ 
+          success: false,
+          errorType: "device_limit_exceeded",
+          message: "You're trying to access from a third device. Maximum 2 devices allowed per account. Please remove a device from your account settings or contact support.",
+          currentDevices: mobileDevices.length,
+          maxDevices: user.maxDevices
+        });
+      }
+
       // Aggiungi il nuovo dispositivo
       user.activeDevices.push({
         deviceId,
         lastLogin: new Date(),
-        deviceInfo: req.headers['user-agent']
+        deviceInfo: req.headers['user-agent'],
+        deviceType
       });
       await user.save();
     }

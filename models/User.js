@@ -56,7 +56,12 @@ const userSchema = new mongoose.Schema(
     activeDevices: [{
       deviceId: String,
       lastLogin: Date,
-      deviceInfo: String
+      deviceInfo: String,
+      deviceType: {
+        type: String,
+        enum: ['mobile', 'web'],
+        required: true
+      }
     }],
     maxDevices: {
       type: Number,

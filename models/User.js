@@ -60,7 +60,7 @@ const userSchema = new mongoose.Schema(
       deviceType: {
         type: String,
         enum: ['mobile', 'web'],
-        required: true
+        default: 'mobile' // Default per dispositivi esistenti
       }
     }],
     maxDevices: {
@@ -82,6 +82,17 @@ userSchema.pre("save", async function (next) {
   } catch (error) {
     next(error);
   }
+});
+
+// Middleware per gestire i dispositivi esistenti
+userSchema.pre("save", function(next) {
+  if (this.isModified("activeDevices")) {
+    this.activeDevices = this.activeDevices.map(device => ({
+      ...device,
+      deviceType: device.deviceType || 'mobile' // Imposta 'mobile' come default per dispositivi esistenti
+    }));
+  }
+  next();
 });
 
 const User = mongoose.model("User", userSchema);

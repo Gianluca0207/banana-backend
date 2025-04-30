@@ -20,18 +20,6 @@ const checkDeviceLimit = async (req, res, next) => {
       return next();
     }
 
-    // Ignora il limite per i dispositivi web
-    if (deviceId.startsWith('web-')) {
-      // Aggiungi il dispositivo web senza controllare il limite
-      user.activeDevices.push({
-        deviceId,
-        lastLogin: new Date(),
-        deviceInfo: req.headers['user-agent']
-      });
-      await user.save();
-      return next();
-    }
-
     // Se non è registrato e abbiamo raggiunto il limite
     if (user.activeDevices.length >= user.maxDevices) {
       return res.status(403).json({ 

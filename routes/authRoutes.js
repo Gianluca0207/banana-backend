@@ -12,10 +12,11 @@ const {
 
 const { protect } = require("../middleware/authMiddleware");
 const User = require("../models/User");
+const checkDeviceLimit = require('../middleware/deviceLimitMiddleware');
 
 // 📌 Rotte per Registrazione, Login, Logout
-router.post("/register", registerUser);
-router.post("/login", loginUser);
+router.post("/register", checkDeviceLimit, registerUser);
+router.post("/login", checkDeviceLimit, loginUser);
 router.post("/logout", logoutUser);
 router.post("/reset-password", resetPassword);
 

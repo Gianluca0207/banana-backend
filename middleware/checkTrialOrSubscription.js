@@ -11,10 +11,19 @@ const checkTrialOrSubscription = async (req, res, next) => {
     }
 
     // ✅ Se è ancora nel periodo di prova
-    if (user.isTrial && user.trialEndsAt && new Date(user.trialEndsAt) > now) {
-      const daysLeft = Math.ceil((new Date(user.trialEndsAt) - now) / (1000 * 60 * 60 * 24));
-      req.trialInfo = { daysLeft };
-      return next();
+    if (user.isTrial) {
+      // Se non c'è una data di fine trial, considera il trial come attivo
+      if (!user.trialEndsAt) {
+        req.trialInfo = { daysLeft: null };
+        return next();
+      }
+
+      const trialEnd = new Date(user.trialEndsAt);
+      if (trialEnd > now) {
+        const daysLeft = Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24));
+        req.trialInfo = { daysLeft };
+        return next();
+      }
     }
 
     // ❌ Altrimenti → trial scaduto e non è abbonato

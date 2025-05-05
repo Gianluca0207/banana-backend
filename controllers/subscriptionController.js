@@ -213,7 +213,7 @@ const getSubscriptionStatus = async (req, res) => {
     const subscriptionEndDate = user.subscriptionEndDate ? new Date(user.subscriptionEndDate) : null;
     
     // Verifica se il trial è scaduto
-    const trialExpired = trialEndsAt ? now > trialEndsAt : true;
+    const trialExpired = user.isTrial ? (trialEndsAt ? now > trialEndsAt : false) : true;
     
     // Verifica se l'abbonamento è scaduto
     const subscriptionExpired = subscriptionEndDate ? now > subscriptionEndDate : true;

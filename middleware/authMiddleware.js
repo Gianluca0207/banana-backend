@@ -5,30 +5,83 @@ const User = require("../models/User");
 const protect = async (req, res, next) => {
     let token;
 
-    console.log(`🔍 Richiesta ${req.method} a ${req.path}`);
-    console.log('Headers:', req.headers);
+    console.log('🔐 [AUTH] Starting token verification for:', {
+        path: req.path,
+        method: req.method,
+        timestamp: new Date().toISOString()
+    });
 
     if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
         try {
-            token = req.headers.authorization.split(" ")[1];  // 📌 Estrai il token
+            token = req.headers.authorization.split(" ")[1];
+            console.log('🔑 [AUTH] Token received:', {
+                tokenLength: token.length,
+                tokenPrefix: token.substring(0, 10) + '...',
+                timestamp: new Date().toISOString()
+            });
+
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            console.log('Token decodificato:', decoded);
+            console.log('✅ [AUTH] Token decoded successfully:', {
+                userId: decoded.id,
+                exp: decoded.exp,
+                timestamp: new Date().toISOString()
+            });
 
-            req.user = await User.findById(decoded.id).select("-password");
-            console.log('Utente trovato:', req.user ? 'Sì' : 'No');
+            const user = await User.findById(decoded.id).select("-password");
+            console.log('👤 [AUTH] User lookup result:', {
+                found: !!user,
+                userId: decoded.id,
+                timestamp: new Date().toISOString()
+            });
 
-            if (!req.user) {
-                return res.status(401).json({ message: "User not found" });
+            if (!user) {
+                console.log('❌ [AUTH] User not found in database');
+                return res.status(401).json({ 
+                    message: "User not found",
+                    errorType: "USER_NOT_FOUND"
+                });
             }
 
-            next();  // 🔓 Continua alla prossima funzione middleware
+            req.user = user;
+            console.log('✅ [AUTH] Authentication successful:', {
+                userId: user._id,
+                email: user.email,
+                timestamp: new Date().toISOString()
+            });
+
+            next();
         } catch (error) {
-            console.error('Errore autenticazione:', error);
-            return res.status(401).json({ message: "Invalid token" });
+            console.error('❌ [AUTH] Token verification failed:', {
+                error: error.message,
+                name: error.name,
+                stack: error.stack,
+                timestamp: new Date().toISOString()
+            });
+
+            // Specific error messages based on the type of error
+            if (error.name === 'TokenExpiredError') {
+                return res.status(401).json({ 
+                    message: "Token expired",
+                    errorType: "TOKEN_EXPIRED"
+                });
+            } else if (error.name === 'JsonWebTokenError') {
+                return res.status(401).json({ 
+                    message: "Invalid token",
+                    errorType: "INVALID_TOKEN"
+                });
+            }
+
+            return res.status(401).json({ 
+                message: "Authentication failed",
+                errorType: "AUTH_FAILED"
+            });
         }
     } else {
-        console.log('Token mancante nei headers');
-        return res.status(401).json({ message: "Access denied, token missing" });
+        console.log('❌ [AUTH] No token provided in request');
+        return res.status(401).json({ 
+            message: "Access denied, token missing",
+            errorType: "NO_TOKEN"
+        });
     }
 };
 

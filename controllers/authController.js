@@ -258,36 +258,6 @@ const loginUser = async (req, res) => {
   }
 };
 
-// 🔄 REFRESH TOKEN
-const refreshToken = async (req, res) => {
-  try {
-    const user = req.user; // Viene dal middleware di autenticazione
-    
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        errorType: "user_not_found",
-        message: "User not found"
-      });
-    }
-
-    // Genera un nuovo token
-    const token = generateToken(user.id);
-
-    res.json({
-      success: true,
-      token
-    });
-  } catch (error) {
-    console.error("❌ Refresh token error:", error);
-    res.status(500).json({
-      success: false,
-      errorType: "server_error",
-      message: "An unexpected error occurred while refreshing the token"
-    });
-  }
-};
-
 // 📌 LOGOUT UTENTE
 const logoutUser = (req, res) => {
   res.status(200).json({ message: "Logout successful" });
@@ -589,6 +559,5 @@ module.exports = {
   updateUserProfile,
   resetPassword,
   changePassword,
-  deleteAccount,
-  refreshToken
+  deleteAccount
 };

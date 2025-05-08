@@ -189,14 +189,26 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Controllo trial scaduto
-    if (user.isTrial && !user.isSubscribed && user.trialEndsAt) {
-      const now = new Date();
-      if (now > new Date(user.trialEndsAt)) {
+    // Controllo trial e subscription solo per dispositivi mobile
+    if (deviceType === 'mobile') {
+      // Controllo trial scaduto
+      if (user.isTrial && !user.isSubscribed && user.trialEndsAt) {
+        const now = new Date();
+        if (now > new Date(user.trialEndsAt)) {
+          return res.status(403).json({ 
+            success: false,
+            errorType: "trial_expired",
+            message: "Your free trial has expired. Please subscribe to continue using the service." 
+          });
+        }
+      }
+
+      // Controllo subscription scaduta
+      if (!user.isTrial && !user.isSubscribed) {
         return res.status(403).json({ 
           success: false,
-          errorType: "trial_expired",
-          message: "Your free trial has expired. Please subscribe to continue using the service." 
+          errorType: "subscription_required",
+          message: "A subscription is required to use the mobile app. Please subscribe to continue." 
         });
       }
     }

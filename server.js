@@ -18,6 +18,11 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// 👇 Configurazione webhook prima di express.json()
+app.post('/api/payments/webhook', express.raw({ type: 'application/json' }));
+
+// 👇 Middleware JSON per tutte le altre route
 app.use(express.json());
 app.use('/data', express.static(path.join(__dirname, 'data')));
 

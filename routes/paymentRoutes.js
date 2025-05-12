@@ -122,68 +122,90 @@ router.post('/create-checkout-session', async (req, res) => {
 });
 
 // 🔵 4. Endpoint webhook per gestire eventi Stripe
-router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+router.post('/webhook', async (req, res) => {
   const sig = req.headers['stripe-signature'];
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET; // Aggiungi questa variabile al tuo file .env
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
   
   let event;
   
   try {
     // Verifica la firma dell'evento
-    if (endpointSecret) {
-      event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-    } else {
-      // In ambiente di sviluppo potresti non avere il secret
-      event = JSON.parse(req.body);
+    if (!endpointSecret) {
+      console.error('❌ STRIPE_WEBHOOK_SECRET non configurato');
+      return res.status(400).json({ error: 'Webhook secret not configured' });
+    }
+
+    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    
+    // Log dell'evento ricevuto
+    console.log('📥 Webhook ricevuto:', {
+      type: event.type,
+      id: event.id,
+      created: new Date(event.created * 1000).toISOString()
+    });
+    
+    // Gestisci i diversi tipi di eventi
+    switch (event.type) {
+      case 'checkout.session.completed':
+        await handleCheckoutSessionCompleted(event.data.object);
+        break;
+        
+      case 'checkout.session.expired':
+        await handleCheckoutSessionExpired(event.data.object);
+        break;
+        
+      case 'customer.subscription.updated':
+        await handleSubscriptionUpdated(event.data.object);
+        break;
+        
+      case 'customer.subscription.deleted':
+        await handleSubscriptionDeleted(event.data.object);
+        break;
+        
+      default:
+        console.log(`⚠️ Evento non gestito: ${event.type}`);
     }
     
-    // Gestisci l'evento di pagamento completato
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
-      
-      // Recupera i metadata
-      const userId = session.metadata.userId;
-      const plan = session.metadata.plan;
-      
-      if (!userId || !plan) {
-        console.error('❌ Metadata mancanti nell\'evento Stripe');
-        return res.status(400).json({ received: true, error: 'Metadata missing' });
-      }
-      
-      // Calcola le date di inizio e fine abbonamento
-      const startDate = new Date();
-      let endDate = new Date(startDate);
-      
-      if (plan === 'monthly') {
-        endDate.setMonth(startDate.getMonth() + 1);
-      } else if (plan === 'semiannual') {
-        endDate.setMonth(startDate.getMonth() + 6);
-      } else if (plan === 'annual') {
-        endDate.setFullYear(startDate.getFullYear() + 1);
-      }
-      
-      // Verifica se esiste già una sottoscrizione
-      const existingSubscription = await Subscription.findOne({ user: userId });
-      
-      if (existingSubscription) {
-        // Aggiorna la sottoscrizione esistente
-        await Subscription.findByIdAndUpdate(
-          existingSubscription._id,
-          {
-            plan,
-            amount: plans[plan].amount,
-            status: 'active',
-            chargeId: session.payment_intent,
-            startDate,
-            endDate,
-            lastPaymentDate: new Date(),
-            nextPaymentDate: endDate
-          }
-        );
-      } else {
-        // Crea una nuova sottoscrizione
-        await Subscription.create({
-          user: userId,
+    // Rispondi sempre con 200
+    res.json({ received: true });
+    
+  } catch (error) {
+    console.error('❌ Errore webhook:', error.message);
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+// Funzioni helper per gestire gli eventi
+async function handleCheckoutSessionCompleted(session) {
+  try {
+    const userId = session.metadata.userId;
+    const plan = session.metadata.plan;
+    
+    if (!userId || !plan) {
+      console.error('❌ Metadata mancanti nell\'evento Stripe');
+      return;
+    }
+    
+    // Calcola le date di inizio e fine abbonamento
+    const startDate = new Date();
+    let endDate = new Date(startDate);
+    
+    if (plan === 'monthly') {
+      endDate.setMonth(startDate.getMonth() + 1);
+    } else if (plan === 'semiannual') {
+      endDate.setMonth(startDate.getMonth() + 6);
+    } else if (plan === 'annual') {
+      endDate.setFullYear(startDate.getFullYear() + 1);
+    }
+    
+    // Verifica se esiste già una sottoscrizione
+    const existingSubscription = await Subscription.findOne({ user: userId });
+    
+    if (existingSubscription) {
+      // Aggiorna la sottoscrizione esistente
+      await Subscription.findByIdAndUpdate(
+        existingSubscription._id,
+        {
           plan,
           amount: plans[plan].amount,
           status: 'active',
@@ -192,27 +214,76 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
           endDate,
           lastPaymentDate: new Date(),
           nextPaymentDate: endDate
-        });
-      }
-      
-      // Aggiorna i dati dell'utente
-      await User.findByIdAndUpdate(userId, {
-        isSubscribed: true,
-        subscriptionPlan: plan,
-        subscriptionStartDate: startDate,
-        subscriptionEndDate: endDate,
-        isTrial: false
+        }
+      );
+    } else {
+      // Crea una nuova sottoscrizione
+      await Subscription.create({
+        user: userId,
+        plan,
+        amount: plans[plan].amount,
+        status: 'active',
+        chargeId: session.payment_intent,
+        startDate,
+        endDate,
+        lastPaymentDate: new Date(),
+        nextPaymentDate: endDate
       });
-      
-      console.log(`✅ Abbonamento aggiornato per l'utente: ${userId}, piano: ${plan}`);
     }
     
-    res.json({ received: true });
+    // Aggiorna i dati dell'utente
+    await User.findByIdAndUpdate(userId, {
+      isSubscribed: true,
+      subscriptionPlan: plan,
+      subscriptionStartDate: startDate,
+      subscriptionEndDate: endDate,
+      isTrial: false
+    });
+    
+    console.log(`✅ Abbonamento aggiornato per l'utente: ${userId}, piano: ${plan}`);
   } catch (error) {
-    console.error(`❌ Errore webhook: ${error.message}`);
-    res.status(400).send(`Webhook Error: ${error.message}`);
+    console.error('❌ Errore nella gestione del pagamento completato:', error);
   }
-});
+}
+
+async function handleCheckoutSessionExpired(session) {
+  try {
+    const userId = session.metadata.userId;
+    console.log(`ℹ️ Sessione scaduta per l'utente: ${userId}`);
+    // Qui puoi aggiungere logica aggiuntiva se necessario
+  } catch (error) {
+    console.error('❌ Errore nella gestione della sessione scaduta:', error);
+  }
+}
+
+async function handleSubscriptionUpdated(subscription) {
+  try {
+    const userId = subscription.metadata.userId;
+    console.log(`ℹ️ Sottoscrizione aggiornata per l'utente: ${userId}`);
+    // Qui puoi aggiungere logica aggiuntiva se necessario
+  } catch (error) {
+    console.error('❌ Errore nella gestione dell\'aggiornamento sottoscrizione:', error);
+  }
+}
+
+async function handleSubscriptionDeleted(subscription) {
+  try {
+    const userId = subscription.metadata.userId;
+    if (userId) {
+      await Subscription.findOneAndUpdate(
+        { user: userId },
+        { status: 'cancelled' }
+      );
+      await User.findByIdAndUpdate(userId, {
+        isSubscribed: false,
+        subscriptionPlan: null
+      });
+      console.log(`ℹ️ Sottoscrizione cancellata per l'utente: ${userId}`);
+    }
+  } catch (error) {
+    console.error('❌ Errore nella gestione della cancellazione sottoscrizione:', error);
+  }
+}
 
 // 🔵 5. Endpoint per confermare l'abbonamento dopo il pagamento (chiamato dall'app mobile)
 router.post('/confirm-subscription', async (req, res) => {

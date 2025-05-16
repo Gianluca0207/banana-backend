@@ -264,17 +264,13 @@ const loginUser = async (req, res) => {
       const hasValidTrial = user.isTrial && new Date(user.trialEndsAt) > now;
       const hasValidSubscription = user.isSubscribed && new Date(user.subscriptionEndDate) > now;
       
+      // For iOS, we only care about access being granted or not
       response.accessGranted = hasValidTrial || hasValidSubscription;
       response.accessExpiryDate = hasValidSubscription ? user.subscriptionEndDate : user.trialEndsAt;
       
       console.log('📱 [iOS] Access data:', {
-        hasValidTrial,
-        hasValidSubscription,
         accessGranted: response.accessGranted,
-        accessExpiryDate: response.accessExpiryDate,
-        now: now.toISOString(),
-        trialEndsAt: user.trialEndsAt,
-        subscriptionEndDate: user.subscriptionEndDate
+        accessExpiryDate: response.accessExpiryDate
       });
     } else {
       // For Android and web, send full subscription data

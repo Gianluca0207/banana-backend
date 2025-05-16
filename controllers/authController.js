@@ -200,7 +200,7 @@ const loginUser = async (req, res) => {
             return res.status(403).json({ 
               success: false,
               errorType: "access_denied",
-              message: "Access denied. Please contact your administrator." 
+              message: "Access denied. This app is only available to authorized users." 
             });
           }
           // Per Android, manteniamo il messaggio specifico
@@ -219,7 +219,7 @@ const loginUser = async (req, res) => {
           return res.status(403).json({ 
             success: false,
             errorType: "access_denied",
-            message: "Access denied. Please contact your administrator." 
+            message: "Access denied. This app is only available to authorized users." 
           });
         }
         // Per Android, manteniamo il messaggio specifico
@@ -245,7 +245,7 @@ const loginUser = async (req, res) => {
           return res.status(403).json({ 
             success: false,
             errorType: "access_denied",
-            message: "Access denied. Please contact your administrator." 
+            message: "Access denied. This app is only available to authorized users." 
           });
         }
         // Per Android, manteniamo il messaggio specifico

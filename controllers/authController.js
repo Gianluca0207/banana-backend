@@ -264,7 +264,14 @@ const loginUser = async (req, res) => {
       const hasValidSubscription = user.isSubscribed && new Date(user.subscriptionEndDate) > new Date();
       
       response.accessGranted = hasValidTrial || hasValidSubscription;
-      response.accessExpiryDate = hasValidTrial ? user.trialEndsAt : user.subscriptionEndDate;
+      response.accessExpiryDate = hasValidSubscription ? user.subscriptionEndDate : user.trialEndsAt;
+      
+      console.log('📱 [iOS] Access data:', {
+        hasValidTrial,
+        hasValidSubscription,
+        accessGranted: response.accessGranted,
+        accessExpiryDate: response.accessExpiryDate
+      });
     } else {
       // For Android and web, send full subscription data
       response.isTrial = user.isTrial;

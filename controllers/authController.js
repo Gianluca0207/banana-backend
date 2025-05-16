@@ -260,8 +260,9 @@ const loginUser = async (req, res) => {
     // Add platform specific data
     if (req.headers['x-platform'] === 'ios') {
       // For iOS, only send access data
-      const hasValidTrial = user.isTrial && new Date(user.trialEndsAt) > new Date();
-      const hasValidSubscription = user.isSubscribed && new Date(user.subscriptionEndDate) > new Date();
+      const now = new Date();
+      const hasValidTrial = user.isTrial && new Date(user.trialEndsAt) > now;
+      const hasValidSubscription = user.isSubscribed && new Date(user.subscriptionEndDate) > now;
       
       response.accessGranted = hasValidTrial || hasValidSubscription;
       response.accessExpiryDate = hasValidSubscription ? user.subscriptionEndDate : user.trialEndsAt;
@@ -270,7 +271,10 @@ const loginUser = async (req, res) => {
         hasValidTrial,
         hasValidSubscription,
         accessGranted: response.accessGranted,
-        accessExpiryDate: response.accessExpiryDate
+        accessExpiryDate: response.accessExpiryDate,
+        now: now.toISOString(),
+        trialEndsAt: user.trialEndsAt,
+        subscriptionEndDate: user.subscriptionEndDate
       });
     } else {
       // For Android and web, send full subscription data

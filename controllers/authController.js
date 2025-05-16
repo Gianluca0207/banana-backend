@@ -261,18 +261,44 @@ const loginUser = async (req, res) => {
     if (platform === 'ios') {
       // For iOS, only send access data
       const now = new Date();
-      const hasValidTrial = user.isTrial && new Date(user.trialEndsAt) > now;
-      const hasValidSubscription = user.isSubscribed && new Date(user.subscriptionEndDate) > now;
+      console.log('📱 [iOS] Checking access:', {
+        now: now.toISOString(),
+        trialEndsAt: user.trialEndsAt,
+        subscriptionEndDate: user.subscriptionEndDate,
+        isTrial: user.isTrial,
+        isSubscribed: user.isSubscribed
+      });
+
+      // Convert dates to Date objects for comparison
+      const trialEndDate = user.trialEndsAt ? new Date(user.trialEndsAt) : null;
+      const subscriptionEndDate = user.subscriptionEndDate ? new Date(user.subscriptionEndDate) : null;
+      
+      const hasValidTrial = user.isTrial && trialEndDate && trialEndDate > now;
+      const hasValidSubscription = user.isSubscribed && subscriptionEndDate && subscriptionEndDate > now;
       
       // For iOS, we only care about access being granted or not
       response.accessGranted = hasValidTrial || hasValidSubscription;
-      response.accessExpiryDate = response.accessGranted ? 
-        (hasValidSubscription ? user.subscriptionEndDate : user.trialEndsAt) : 
-        null;
+      
+      // If access is granted, use the latest date between trial and subscription
+      if (response.accessGranted) {
+        if (hasValidSubscription && hasValidTrial) {
+          response.accessExpiryDate = subscriptionEndDate > trialEndDate ? 
+            user.subscriptionEndDate : 
+            user.trialEndsAt;
+        } else if (hasValidSubscription) {
+          response.accessExpiryDate = user.subscriptionEndDate;
+        } else {
+          response.accessExpiryDate = user.trialEndsAt;
+        }
+      } else {
+        response.accessExpiryDate = null;
+      }
       
       console.log('📱 [iOS] Access data:', {
         accessGranted: response.accessGranted,
-        accessExpiryDate: response.accessExpiryDate
+        accessExpiryDate: response.accessExpiryDate,
+        hasValidTrial,
+        hasValidSubscription
       });
     } else {
       // For Android and web, send full subscription data

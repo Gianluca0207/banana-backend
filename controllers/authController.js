@@ -276,12 +276,14 @@ const loginUser = async (req, res) => {
       });
     } else {
       // For Android and web, send full subscription data
-      response.isTrial = user.isTrial;
-      response.trialEndsAt = user.trialEndsAt;
-      response.isSubscribed = user.isSubscribed;
-      response.subscriptionPlan = user.subscriptionPlan;
-      response.subscriptionEndDate = user.subscriptionEndDate;
-      response.subscriptionStartDate = user.subscriptionStartDate;
+      Object.assign(response, {
+        isTrial: user.isTrial,
+        trialEndsAt: user.trialEndsAt,
+        isSubscribed: user.isSubscribed,
+        subscriptionPlan: user.subscriptionPlan,
+        subscriptionEndDate: user.subscriptionEndDate,
+        subscriptionStartDate: user.subscriptionStartDate
+      });
     }
 
     res.json(response);

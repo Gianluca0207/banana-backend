@@ -266,7 +266,9 @@ const loginUser = async (req, res) => {
       
       // For iOS, we only care about access being granted or not
       response.accessGranted = hasValidTrial || hasValidSubscription;
-      response.accessExpiryDate = hasValidSubscription ? user.subscriptionEndDate : user.trialEndsAt;
+      response.accessExpiryDate = response.accessGranted ? 
+        (hasValidSubscription ? user.subscriptionEndDate : user.trialEndsAt) : 
+        null;
       
       // Remove all subscription/trial related fields for iOS
       delete response.isSubscribed;

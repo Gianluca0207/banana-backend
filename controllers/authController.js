@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto'); // Import crypto for token generation
 const nodemailer = require('nodemailer'); // Add nodemailer
+const Device = require('../models/Device'); // Added Device model
 
 // 🔐 Genera JWT
 const generateToken = (id) => {

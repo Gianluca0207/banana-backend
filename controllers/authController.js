@@ -151,7 +151,7 @@ const registerUser = async (req, res) => {
 
 // 📌 LOGIN UTENTE
 const loginUser = async (req, res) => {
-  const { email, password, deviceId, deviceType = 'web' } = req.body;
+  const { email, password, deviceId, deviceType = 'web', platform } = req.body;
 
   try {
     if (!email || !password) {
@@ -243,6 +243,28 @@ const loginUser = async (req, res) => {
 
     const token = generateToken(user.id);
 
+    // Per iOS, restituiamo una risposta semplificata
+    if (platform === 'ios') {
+      const accessGranted = user.isSubscribed || (user.isTrial && new Date() < new Date(user.trialEndsAt));
+      const accessExpiryDate = user.isSubscribed ? user.subscriptionEndDate : user.trialEndsAt;
+
+      return res.json({
+        success: true,
+        _id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        accessGranted,
+        accessExpiryDate,
+        token,
+        deviceInfo: {
+          currentDevices: user.activeDevices.length,
+          maxDevices: user.maxDevices
+        }
+      });
+    }
+
+    // Per Android e web, manteniamo la risposta originale
     res.json({
       success: true,
       _id: user.id,
@@ -252,6 +274,8 @@ const loginUser = async (req, res) => {
       isTrial: user.isTrial,
       trialEndsAt: user.trialEndsAt,
       isSubscribed: user.isSubscribed,
+      subscriptionPlan: user.subscriptionPlan,
+      subscriptionEndDate: user.subscriptionEndDate,
       token,
       deviceInfo: {
         currentDevices: user.activeDevices.length,

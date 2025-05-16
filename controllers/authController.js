@@ -195,6 +195,15 @@ const loginUser = async (req, res) => {
       if (user.isTrial && !user.isSubscribed && user.trialEndsAt) {
         const now = new Date();
         if (now > new Date(user.trialEndsAt)) {
+          // Per iOS, usiamo un messaggio generico
+          if (platform === 'ios') {
+            return res.status(403).json({ 
+              success: false,
+              errorType: "access_denied",
+              message: "Access denied. Please contact your administrator." 
+            });
+          }
+          // Per Android, manteniamo il messaggio specifico
           return res.status(403).json({ 
             success: false,
             errorType: "trial_expired",
@@ -205,6 +214,15 @@ const loginUser = async (req, res) => {
 
       // Controllo subscription scaduta
       if (!user.isTrial && !user.isSubscribed) {
+        // Per iOS, usiamo un messaggio generico
+        if (platform === 'ios') {
+          return res.status(403).json({ 
+            success: false,
+            errorType: "access_denied",
+            message: "Access denied. Please contact your administrator." 
+          });
+        }
+        // Per Android, manteniamo il messaggio specifico
         return res.status(403).json({ 
           success: false,
           errorType: "subscription_required",
@@ -222,6 +240,15 @@ const loginUser = async (req, res) => {
       // Controlla solo i dispositivi mobile per il limite
       const mobileDevices = user.activeDevices.filter(d => d.deviceType === 'mobile');
       if (deviceType === 'mobile' && mobileDevices.length >= user.maxDevices) {
+        // Per iOS, usiamo un messaggio generico
+        if (platform === 'ios') {
+          return res.status(403).json({ 
+            success: false,
+            errorType: "access_denied",
+            message: "Access denied. Please contact your administrator." 
+          });
+        }
+        // Per Android, manteniamo il messaggio specifico
         return res.status(403).json({ 
           success: false,
           errorType: "device_limit_exceeded",

@@ -272,8 +272,11 @@ const loginUser = async (req, res) => {
 
     // Per iOS, restituiamo una risposta semplificata
     if (platform === 'ios') {
-      const accessGranted = user.isSubscribed || (user.isTrial && new Date() < new Date(user.trialEndsAt));
+      const now = new Date();
       const accessExpiryDate = user.isSubscribed ? user.subscriptionEndDate : user.trialEndsAt;
+      const accessGranted = user.isSubscribed ? 
+        (user.subscriptionEndDate && new Date(user.subscriptionEndDate) > now) :
+        (user.isTrial && user.trialEndsAt && new Date(user.trialEndsAt) > now);
 
       return res.json({
         success: true,

@@ -4,6 +4,7 @@ const checkTrialOrSubscription = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
     const now = new Date();
+    const platform = req.headers['x-platform'] || 'web'; // Aggiungiamo il controllo della piattaforma
 
     // ✅ Se l'utente ha un abbonamento attivo → passa
     if (user.isSubscribed && user.subscriptionEndDate && new Date(user.subscriptionEndDate) > now) {
@@ -27,6 +28,14 @@ const checkTrialOrSubscription = async (req, res, next) => {
     }
 
     // ❌ Altrimenti → trial scaduto e non è abbonato
+    if (platform === 'ios') {
+      return res.status(403).json({ 
+        message: "Access denied. This app is only available to authorized users.",
+        code: "ACCESS_DENIED"
+      });
+    }
+
+    // Per Android e web, manteniamo il messaggio originale
     return res.status(403).json({ 
       message: "Trial expired. Please subscribe to continue.",
       code: "TRIAL_EXPIRED",

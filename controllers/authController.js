@@ -268,6 +268,14 @@ const loginUser = async (req, res) => {
       response.accessGranted = hasValidTrial || hasValidSubscription;
       response.accessExpiryDate = hasValidSubscription ? user.subscriptionEndDate : user.trialEndsAt;
       
+      // Remove all subscription/trial related fields for iOS
+      delete response.isSubscribed;
+      delete response.isTrial;
+      delete response.trialEndsAt;
+      delete response.subscriptionPlan;
+      delete response.subscriptionEndDate;
+      delete response.subscriptionStartDate;
+      
       console.log('📱 [iOS] Access data:', {
         accessGranted: response.accessGranted,
         accessExpiryDate: response.accessExpiryDate

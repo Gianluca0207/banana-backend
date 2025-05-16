@@ -151,7 +151,7 @@ const registerUser = async (req, res) => {
 
 // 📌 LOGIN UTENTE
 const loginUser = async (req, res) => {
-  const { email, password, deviceId, deviceType = 'web', platform } = req.body;
+  const { email, password, deviceId, deviceType = 'web' } = req.body;
 
   try {
     if (!email || !password) {
@@ -195,15 +195,6 @@ const loginUser = async (req, res) => {
       if (user.isTrial && !user.isSubscribed && user.trialEndsAt) {
         const now = new Date();
         if (now > new Date(user.trialEndsAt)) {
-          // Per iOS, usiamo un messaggio generico
-          if (platform === 'ios') {
-            return res.status(403).json({ 
-              success: false,
-              errorType: "access_denied",
-              message: "Access denied. This app is only available to authorized users." 
-            });
-          }
-          // Per Android, manteniamo il messaggio specifico
           return res.status(403).json({ 
             success: false,
             errorType: "trial_expired",
@@ -214,15 +205,6 @@ const loginUser = async (req, res) => {
 
       // Controllo subscription scaduta
       if (!user.isTrial && !user.isSubscribed) {
-        // Per iOS, usiamo un messaggio generico
-        if (platform === 'ios') {
-          return res.status(403).json({ 
-            success: false,
-            errorType: "access_denied",
-            message: "Access denied. This app is only available to authorized users." 
-          });
-        }
-        // Per Android, manteniamo il messaggio specifico
         return res.status(403).json({ 
           success: false,
           errorType: "subscription_required",
@@ -240,15 +222,6 @@ const loginUser = async (req, res) => {
       // Controlla solo i dispositivi mobile per il limite
       const mobileDevices = user.activeDevices.filter(d => d.deviceType === 'mobile');
       if (deviceType === 'mobile' && mobileDevices.length >= user.maxDevices) {
-        // Per iOS, usiamo un messaggio generico
-        if (platform === 'ios') {
-          return res.status(403).json({ 
-            success: false,
-            errorType: "access_denied",
-            message: "Access denied. This app is only available to authorized users." 
-          });
-        }
-        // Per Android, manteniamo il messaggio specifico
         return res.status(403).json({ 
           success: false,
           errorType: "device_limit_exceeded",
@@ -270,48 +243,39 @@ const loginUser = async (req, res) => {
 
     const token = generateToken(user.id);
 
-    // Per iOS, restituiamo una risposta semplificata
-    if (platform === 'ios') {
-      const now = new Date();
-      const accessExpiryDate = user.isSubscribed ? user.subscriptionEndDate : user.trialEndsAt;
-      const accessGranted = user.isSubscribed ? 
-        (user.subscriptionEndDate && new Date(user.subscriptionEndDate) > now) :
-        (user.isTrial && user.trialEndsAt && new Date(user.trialEndsAt) > now);
-
-      return res.json({
-        success: true,
-        _id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        accessGranted,
-        accessExpiryDate,
-        token,
-        deviceInfo: {
-          currentDevices: user.activeDevices.length,
-          maxDevices: user.maxDevices
-        }
-      });
-    }
-
-    // Per Android e web, manteniamo la risposta originale
-    res.json({
+    // Prepare response based on platform
+    const response = {
       success: true,
       _id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
-      isTrial: user.isTrial,
-      trialEndsAt: user.trialEndsAt,
-      isSubscribed: user.isSubscribed,
-      subscriptionPlan: user.subscriptionPlan,
-      subscriptionEndDate: user.subscriptionEndDate,
       token,
       deviceInfo: {
         currentDevices: user.activeDevices.length,
         maxDevices: user.maxDevices
       }
-    });
+    };
+
+    // Add platform specific data
+    if (req.headers['x-platform'] === 'ios') {
+      // For iOS, only send access data
+      const hasValidTrial = user.isTrial && new Date(user.trialEndsAt) > new Date();
+      const hasValidSubscription = user.isSubscribed && new Date(user.subscriptionEndDate) > new Date();
+      
+      response.accessGranted = hasValidTrial || hasValidSubscription;
+      response.accessExpiryDate = hasValidTrial ? user.trialEndsAt : user.subscriptionEndDate;
+    } else {
+      // For Android and web, send full subscription data
+      response.isTrial = user.isTrial;
+      response.trialEndsAt = user.trialEndsAt;
+      response.isSubscribed = user.isSubscribed;
+      response.subscriptionPlan = user.subscriptionPlan;
+      response.subscriptionEndDate = user.subscriptionEndDate;
+      response.subscriptionStartDate = user.subscriptionStartDate;
+    }
+
+    res.json(response);
 
   } catch (error) {
     console.error("❌ Login error:", error);

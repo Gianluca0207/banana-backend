@@ -151,7 +151,7 @@ const registerUser = async (req, res) => {
 
 // 📌 LOGIN UTENTE
 const loginUser = async (req, res) => {
-  const { email, password, deviceId, deviceType = 'web' } = req.body;
+  const { email, password, deviceId, deviceType = 'web', platform } = req.body;
 
   try {
     if (!email || !password) {
@@ -189,8 +189,8 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Controllo trial e subscription solo per dispositivi mobile
-    if (deviceType === 'mobile') {
+    // Controllo trial e subscription solo per dispositivi mobile non iOS
+    if (deviceType === 'mobile' && platform !== 'ios') {
       // Controllo trial scaduto
       if (user.isTrial && !user.isSubscribed && user.trialEndsAt) {
         const now = new Date();
@@ -258,7 +258,7 @@ const loginUser = async (req, res) => {
     };
 
     // Add platform specific data
-    if (req.headers['x-platform'] === 'ios') {
+    if (platform === 'ios') {
       // For iOS, only send access data
       const now = new Date();
       const hasValidTrial = user.isTrial && new Date(user.trialEndsAt) > now;
@@ -269,14 +269,6 @@ const loginUser = async (req, res) => {
       response.accessExpiryDate = response.accessGranted ? 
         (hasValidSubscription ? user.subscriptionEndDate : user.trialEndsAt) : 
         null;
-      
-      // Remove all subscription/trial related fields for iOS
-      delete response.isSubscribed;
-      delete response.isTrial;
-      delete response.trialEndsAt;
-      delete response.subscriptionPlan;
-      delete response.subscriptionEndDate;
-      delete response.subscriptionStartDate;
       
       console.log('📱 [iOS] Access data:', {
         accessGranted: response.accessGranted,

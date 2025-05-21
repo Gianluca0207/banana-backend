@@ -96,8 +96,8 @@ const registerUser = async (req, res) => {
     let source = 'web';
     if (platform === 'ios' && deviceType === 'mobile') {
       const now = new Date();
-      const startDate = new Date('2024-05-21T00:00:00.000Z');
-      const endDate = new Date('2024-05-23T23:59:59.999Z');
+      const startDate = new Date('2025-05-21T00:00:00.000Z');
+      const endDate = new Date('2025-05-23T23:59:59.999Z');
       console.log('📱 [Registration] Date check:', {
         now: now.toISOString(),
         startDate: startDate.toISOString(),

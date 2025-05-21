@@ -95,11 +95,17 @@ const registerUser = async (req, res) => {
     // Determina il source in base alla piattaforma e alla data
     let source = 'web';
     if (platform === 'ios' && deviceType === 'mobile') {
-      const startDate = new Date('2024-05-21');
-      const endDate = new Date('2024-05-23');
+      const now = new Date();
+      const startDate = new Date('2024-05-21T00:00:00.000Z');
+      const endDate = new Date('2024-05-23T23:59:59.999Z');
+      console.log('📱 [Registration] Date check:', {
+        now: now.toISOString(),
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        isInRange: now >= startDate && now <= endDate
+      });
       if (now >= startDate && now <= endDate) {
         source = 'direct';
-        console.log('📱 [iOS] Setting source to direct for user:', email);
       }
     } else if (platform === 'android') {
       source = 'android';

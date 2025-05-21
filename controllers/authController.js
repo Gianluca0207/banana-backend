@@ -99,10 +99,13 @@ const registerUser = async (req, res) => {
       const endDate = new Date('2024-05-23');
       if (now >= startDate && now <= endDate) {
         source = 'direct';
+        console.log('📱 [iOS] Setting source to direct for user:', email);
       }
     } else if (platform === 'android') {
       source = 'android';
     }
+
+    console.log('📱 [Registration] Platform:', platform, 'DeviceType:', deviceType, 'Source:', source);
 
     const user = new User({
       name,

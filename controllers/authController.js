@@ -129,21 +129,37 @@ const registerUser = async (req, res) => {
 
     const token = generateToken(user.id);
 
-    res.status(201).json({
+    // Prepare response based on platform
+    const response = {
       success: true,
       _id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
-      isTrial: user.isTrial,
-      trialEndsAt: user.trialEndsAt,
-      isSubscribed: user.isSubscribed,
       token,
       deviceInfo: {
         currentDevices: user.activeDevices.length,
         maxDevices: user.maxDevices
       }
-    });
+    };
+
+    // Add platform specific data
+    if (platform === 'ios') {
+      // For iOS, only send access data
+      response.accessGranted = true;
+    } else {
+      // For Android and web, send full subscription data
+      Object.assign(response, {
+        isTrial: user.isTrial,
+        trialEndsAt: user.trialEndsAt,
+        isSubscribed: user.isSubscribed,
+        subscriptionPlan: user.subscriptionPlan,
+        subscriptionEndDate: user.subscriptionEndDate,
+        subscriptionStartDate: user.subscriptionStartDate
+      });
+    }
+
+    res.status(201).json(response);
   } catch (error) {
     console.error("❌ Registration error:", error);
     
@@ -282,46 +298,7 @@ const loginUser = async (req, res) => {
     // Add platform specific data
     if (platform === 'ios') {
       // For iOS, only send access data
-      const now = new Date();
-      console.log('📱 [iOS] Checking access:', {
-        now: now.toISOString(),
-        trialEndsAt: user.trialEndsAt,
-        subscriptionEndDate: user.subscriptionEndDate,
-        isTrial: user.isTrial,
-        isSubscribed: user.isSubscribed
-      });
-
-      // Convert dates to Date objects for comparison
-      const trialEndDate = user.trialEndsAt ? new Date(user.trialEndsAt) : null;
-      const subscriptionEndDate = user.subscriptionEndDate ? new Date(user.subscriptionEndDate) : null;
-      
-      const hasValidTrial = user.isTrial && trialEndDate && trialEndDate > now;
-      const hasValidSubscription = user.isSubscribed && subscriptionEndDate && subscriptionEndDate > now;
-      
-      // For iOS, we only care about access being granted or not
-      response.accessGranted = hasValidTrial || hasValidSubscription;
-      
-      // If access is granted, use the latest date between trial and subscription
-      if (response.accessGranted) {
-        if (hasValidSubscription && hasValidTrial) {
-          response.accessExpiryDate = subscriptionEndDate > trialEndDate ? 
-            user.subscriptionEndDate : 
-            user.trialEndsAt;
-        } else if (hasValidSubscription) {
-          response.accessExpiryDate = user.subscriptionEndDate;
-        } else {
-          response.accessExpiryDate = user.trialEndsAt;
-        }
-      } else {
-        response.accessExpiryDate = null;
-      }
-      
-      console.log('📱 [iOS] Access data:', {
-        accessGranted: response.accessGranted,
-        accessExpiryDate: response.accessExpiryDate,
-        hasValidTrial,
-        hasValidSubscription
-      });
+      response.accessGranted = true;
     } else {
       // For Android and web, send full subscription data
       Object.assign(response, {

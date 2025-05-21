@@ -28,7 +28,7 @@ console.log('✅ EMAIL_PASSWORD configurata');
 
 // 📌 REGISTRA UTENTE
 const registerUser = async (req, res) => {
-  const { name, email, password, phone, deviceId, deviceType = 'web' } = req.body;
+  const { name, email, password, phone, deviceId, deviceType = 'web', platform } = req.body;
 
   console.log("📥 Dati ricevuti:", { ...req.body, password: '***' });
 
@@ -92,12 +92,25 @@ const registerUser = async (req, res) => {
     const now = new Date();
     const trialEndsAt = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
 
+    // Determina il source in base alla piattaforma e alla data
+    let source = 'web';
+    if (platform === 'ios' && deviceType === 'mobile') {
+      const startDate = new Date('2024-05-21');
+      const endDate = new Date('2024-05-23');
+      if (now >= startDate && now <= endDate) {
+        source = 'direct';
+      }
+    } else if (platform === 'android') {
+      source = 'android';
+    }
+
     const user = new User({
       name,
       email: normalizedEmail,
       phone,
       password,
       role,
+      source,
       isTrial: true,
       trialEndsAt,
       isSubscribed: false,
@@ -186,6 +199,15 @@ const loginUser = async (req, res) => {
         success: false,
         errorType: "invalid_password",
         message: "Incorrect password. Please try again" 
+      });
+    }
+
+    // Blocca l'accesso web per gli utenti con source 'direct'
+    if (deviceType === 'web' && user.source === 'direct') {
+      return res.status(403).json({
+        success: false,
+        errorType: "web_access_denied",
+        message: "You don't have access to premium contents only available on our website."
       });
     }
 

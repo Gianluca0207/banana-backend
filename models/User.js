@@ -25,6 +25,11 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "admin"],
       default: "user",
     },
+    source: {
+      type: String,
+      enum: ['direct', 'web', 'android'],
+      default: 'web'
+    },
 
     // 🔥 Nuovi campi per gestione abbonamento e trial:
     isTrial: {

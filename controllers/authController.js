@@ -138,6 +138,54 @@ const registerUser = async (req, res) => {
 
     const token = generateToken(user.id);
 
+    // Invia email di benvenuto
+    try {
+      const mailOptions = {
+        from: 'bananatrackerecuador@gmail.com',
+        to: normalizedEmail,
+        subject: 'Welcome to BananaTracker',
+        html: `
+          <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #FFD700; text-align: center;">Welcome to BananaTracker</h2>
+            <p>Hello ${user.name},</p>
+            <p>Thank you for registering with BananaTracker!</p>
+            <p>Visit our website for all information about our services.</p>
+            <p style="margin-top: 30px;">Best regards,<br>The BananaTracker Team</p>
+          </div>
+        `
+      };
+
+      console.log('📧 Attempting to send welcome email to:', normalizedEmail);
+      
+      await new Promise((resolve, reject) => {
+        transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            console.error('❌ Error sending welcome email:', {
+              error: error.message,
+              code: error.code,
+              command: error.command,
+              recipient: normalizedEmail
+            });
+            reject(error);
+          } else {
+            console.log('✅ Welcome email sent successfully:', {
+              messageId: info.messageId,
+              response: info.response,
+              recipient: normalizedEmail
+            });
+            resolve(info);
+          }
+        });
+      });
+    } catch (emailError) {
+      console.error('❌ Failed to send welcome email:', {
+        error: emailError.message,
+        recipient: normalizedEmail,
+        timestamp: new Date().toISOString()
+      });
+      // Non blocchiamo la registrazione se l'email fallisce
+    }
+
     // Prepare response based on platform
     const response = {
       success: true,

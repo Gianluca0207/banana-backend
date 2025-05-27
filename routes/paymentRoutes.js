@@ -3,6 +3,8 @@ const router = express.Router();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Subscription = require('../models/subscriptionModel');
 const User = require('../models/User');
+const axios = require('axios');
+const jwt = require('jsonwebtoken');
 
 // 🔁 1. Controlla se il free trial è scaduto
 router.get('/check-trial/:userId', async (req, res) => {
@@ -434,6 +436,114 @@ router.get('/process-success', async (req, res) => {
 // Handle cancel redirect
 router.get('/process-cancel', (req, res) => {
   res.redirect('bananatrack://payment/cancel');
+});
+
+// Verifica ricevuta Apple
+router.post('/verify-receipt', async (req, res) => {
+  try {
+    const { receipt } = req.body;
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ success: false, message: 'No token provided' });
+    }
+
+    // Verifica la ricevuta con Apple
+    const verifyReceipt = async (receiptData, isProduction = false) => {
+      const url = isProduction 
+        ? 'https://buy.itunes.apple.com/verifyReceipt'
+        : 'https://sandbox.itunes.apple.com/verifyReceipt';
+
+      try {
+        const response = await axios.post(url, {
+          'receipt-data': receiptData,
+          'password': process.env.APPLE_SHARED_SECRET,
+          'exclude-old-transactions': true
+        });
+
+        return response.data;
+      } catch (error) {
+        console.error('Error verifying receipt:', error);
+        throw error;
+      }
+    };
+
+    // Prima prova in produzione, se fallisce prova in sandbox
+    let verificationResult = await verifyReceipt(receipt, true);
+    if (verificationResult.status === 21007) {
+      verificationResult = await verifyReceipt(receipt, false);
+    }
+
+    if (verificationResult.status !== 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid receipt',
+        status: verificationResult.status 
+      });
+    }
+
+    // Estrai le informazioni dalla ricevuta
+    const latestReceipt = verificationResult.latest_receipt_info[0];
+    const productId = latestReceipt.product_id;
+    const purchaseDate = new Date(parseInt(latestReceipt.purchase_date_ms));
+    const expiresDate = new Date(parseInt(latestReceipt.expires_date_ms));
+
+    // Verifica che il prodotto sia quello corretto
+    if (productId !== 'bananatrack.monthly') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid product ID' 
+      });
+    }
+
+    // Decodifica il token per ottenere l'userId
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+
+    // Aggiorna o crea la sottoscrizione
+    const subscription = await Subscription.findOneAndUpdate(
+      { user: userId },
+      {
+        user: userId,
+        plan: 'monthly',
+        amount: 20000, // $200.00
+        status: 'active',
+        startDate: purchaseDate,
+        endDate: expiresDate,
+        lastPaymentDate: purchaseDate,
+        nextPaymentDate: expiresDate,
+        provider: 'apple'
+      },
+      { upsert: true, new: true }
+    );
+
+    // Aggiorna l'utente
+    await User.findByIdAndUpdate(userId, {
+      isSubscribed: true,
+      subscriptionPlan: 'monthly',
+      subscriptionStartDate: purchaseDate,
+      subscriptionEndDate: expiresDate,
+      isTrial: false,
+      subscriptionProvider: 'apple'
+    });
+
+    res.json({
+      success: true,
+      subscription: {
+        plan: 'monthly',
+        startDate: purchaseDate,
+        endDate: expiresDate
+      }
+    });
+
+  } catch (error) {
+    console.error('Error verifying Apple receipt:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error verifying receipt',
+      error: error.message 
+    });
+  }
 });
 
 module.exports = router;
